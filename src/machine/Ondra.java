@@ -24,6 +24,9 @@ import z80core.Z80;
 public class Ondra extends Thread 
  implements z80core.MemIoOps, z80core.NotifyOps, ClockTimeoutListener {
     
+    private final int T_DMAOFF = 40000;
+    private final int T_DMAON  = 10000;
+    
     private Screen scr;
     private BufferedImage img;
     private byte px[];
@@ -44,6 +47,8 @@ public class Ondra extends Thread
     private byte portA0, portA1, portA3;
     private byte iov[];
    
+    private int t_frame = T_DMAOFF;
+    
     private WavFile wav = null;
     private File loadF = null;
     private boolean tape = false;
@@ -109,6 +114,7 @@ public class Ondra extends Thread
 
     public final void Reset(boolean dirty) {
         portA3 = portA0 = 0;
+        t_frame = T_DMAOFF;
         mem.Reset(dirty);
         mem.mapRom(true);
         clk.reset();
@@ -169,7 +175,7 @@ public class Ondra extends Thread
             cpu.setINTLine(true);
             cpu.execute(clk.getTstates()+16);
             cpu.setINTLine(false);            
-            cpu.execute(clk.getTstates()+20000);
+            cpu.execute(clk.getTstates()+t_frame);
             
         }  
     }
@@ -251,6 +257,12 @@ public class Ondra extends Thread
 //        System.out.println(String.format("Out: %02X,%02X (%04X)", port,value,cpu.getRegPC()));
         if ((port & 0x08)==0) {
             portA3 = (byte) value;
+            if ((portA3&0x01)==0) {
+                t_frame = T_DMAOFF;
+            }
+            else {
+                t_frame = T_DMAON;
+            }
             if ((portA3&0x02)==0) {
                 mem.mapRom(true);
             }
