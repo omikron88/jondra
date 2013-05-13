@@ -35,7 +35,7 @@ public class Ondra extends Thread
     private Clock clk;
     private Z80 cpu;
     
-    private JLabel GreenLed, YellowLed;
+    private JLabel GreenLed, YellowLed, TapeLed;
     
     private boolean paused;
     
@@ -101,6 +101,10 @@ public class Ondra extends Thread
 
     public void setYellowLed(JLabel led) {
         YellowLed = led;
+    }
+
+    public void setTapeLed(JLabel led) {
+        TapeLed = led;
     }
 
     public final void Reset(boolean dirty) {
@@ -279,12 +283,14 @@ public class Ondra extends Thread
                  clk.addClockTimeoutListener(this);
                  clk.setTimeout(sampleT);
                  tape = true;
+                 TapeLed.setEnabled(true);
                 }
             }
             else {
                 if (tape) {
                     clk.removeClockTimeoutListener(this);
                     tape = false;
+                    TapeLed.setEnabled(false);
                 }
             }
         }
