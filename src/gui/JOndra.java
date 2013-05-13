@@ -7,7 +7,6 @@ package gui;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,18 +50,21 @@ public class JOndra extends javax.swing.JFrame {
         bOpent = new javax.swing.JButton();
         jSeparator2 = new javax.swing.JToolBar.Separator();
         bReset = new javax.swing.JButton();
-        jSeparator12 = new javax.swing.JToolBar.Separator();
+        jSeparator3 = new javax.swing.JToolBar.Separator();
         bNmi = new javax.swing.JButton();
-        jSeparator13 = new javax.swing.JToolBar.Separator();
+        jSeparator4 = new javax.swing.JToolBar.Separator();
         bPause = new javax.swing.JButton();
-        jSeparator14 = new javax.swing.JToolBar.Separator();
+        jSeparator5 = new javax.swing.JToolBar.Separator();
         bSettings = new javax.swing.JButton();
-        jSeparator15 = new javax.swing.JToolBar.Separator();
+        jSeparator6 = new javax.swing.JToolBar.Separator();
         statusPanel = new javax.swing.JPanel();
+        jSeparator31 = new javax.swing.JSeparator();
         GreenLed = new javax.swing.JLabel();
-        jSeparator10 = new javax.swing.JSeparator();
+        jSeparator32 = new javax.swing.JSeparator();
         YellowLed = new javax.swing.JLabel();
-        jSeparator11 = new javax.swing.JSeparator();
+        jSeparator33 = new javax.swing.JSeparator();
+        TapeLed = new javax.swing.JLabel();
+        jSeparator34 = new javax.swing.JSeparator();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Ondra SPO 186");
@@ -95,7 +97,7 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bReset);
-        ToolBar.add(jSeparator12);
+        ToolBar.add(jSeparator3);
 
         bNmi.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/nmi.png"))); // NOI18N
         bNmi.setFocusable(false);
@@ -108,7 +110,7 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bNmi);
-        ToolBar.add(jSeparator13);
+        ToolBar.add(jSeparator4);
 
         bPause.setIcon(iRun);
         bPause.setFocusable(false);
@@ -121,7 +123,7 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bPause);
-        ToolBar.add(jSeparator14);
+        ToolBar.add(jSeparator5);
 
         bSettings.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/settings.png"))); // NOI18N
         bSettings.setFocusable(false);
@@ -134,38 +136,60 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bSettings);
-        ToolBar.add(jSeparator15);
+        ToolBar.add(jSeparator6);
 
         getContentPane().add(ToolBar, java.awt.BorderLayout.PAGE_START);
 
-        statusPanel.setPreferredSize(new java.awt.Dimension(100, 25));
+        statusPanel.setPreferredSize(new java.awt.Dimension(100, 26));
         statusPanel.setLayout(new javax.swing.BoxLayout(statusPanel, javax.swing.BoxLayout.LINE_AXIS));
+
+        jSeparator31.setOrientation(javax.swing.SwingConstants.VERTICAL);
+        jSeparator31.setMaximumSize(new java.awt.Dimension(5, 32767));
+        jSeparator31.setMinimumSize(new java.awt.Dimension(3, 16));
+        jSeparator31.setPreferredSize(new java.awt.Dimension(3, 16));
+        jSeparator31.setRequestFocusEnabled(false);
+        statusPanel.add(jSeparator31);
 
         GreenLed.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         GreenLed.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/green.png"))); // NOI18N
         GreenLed.setEnabled(false);
         GreenLed.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        GreenLed.setPreferredSize(new java.awt.Dimension(24, 24));
         statusPanel.add(GreenLed);
 
-        jSeparator10.setOrientation(javax.swing.SwingConstants.VERTICAL);
-        jSeparator10.setMaximumSize(new java.awt.Dimension(5, 32767));
-        jSeparator10.setMinimumSize(new java.awt.Dimension(3, 16));
-        jSeparator10.setPreferredSize(new java.awt.Dimension(3, 16));
-        jSeparator10.setRequestFocusEnabled(false);
-        statusPanel.add(jSeparator10);
+        jSeparator32.setOrientation(javax.swing.SwingConstants.VERTICAL);
+        jSeparator32.setMaximumSize(new java.awt.Dimension(5, 32767));
+        jSeparator32.setMinimumSize(new java.awt.Dimension(3, 16));
+        jSeparator32.setPreferredSize(new java.awt.Dimension(3, 16));
+        jSeparator32.setRequestFocusEnabled(false);
+        statusPanel.add(jSeparator32);
 
         YellowLed.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         YellowLed.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/yellow.png"))); // NOI18N
         YellowLed.setEnabled(false);
         YellowLed.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        YellowLed.setPreferredSize(new java.awt.Dimension(24, 24));
         statusPanel.add(YellowLed);
 
-        jSeparator11.setOrientation(javax.swing.SwingConstants.VERTICAL);
-        jSeparator11.setMaximumSize(new java.awt.Dimension(5, 32767));
-        jSeparator11.setMinimumSize(new java.awt.Dimension(3, 16));
-        jSeparator11.setPreferredSize(new java.awt.Dimension(3, 16));
-        jSeparator11.setRequestFocusEnabled(false);
-        statusPanel.add(jSeparator11);
+        jSeparator33.setOrientation(javax.swing.SwingConstants.VERTICAL);
+        jSeparator33.setMaximumSize(new java.awt.Dimension(5, 32767));
+        jSeparator33.setMinimumSize(new java.awt.Dimension(3, 16));
+        jSeparator33.setPreferredSize(new java.awt.Dimension(3, 16));
+        jSeparator33.setRequestFocusEnabled(false);
+        statusPanel.add(jSeparator33);
+
+        TapeLed.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        TapeLed.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/tape.png"))); // NOI18N
+        TapeLed.setEnabled(false);
+        TapeLed.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        statusPanel.add(TapeLed);
+
+        jSeparator34.setOrientation(javax.swing.SwingConstants.VERTICAL);
+        jSeparator34.setMaximumSize(new java.awt.Dimension(5, 32767));
+        jSeparator34.setMinimumSize(new java.awt.Dimension(3, 16));
+        jSeparator34.setPreferredSize(new java.awt.Dimension(3, 16));
+        jSeparator34.setRequestFocusEnabled(false);
+        statusPanel.add(jSeparator34);
 
         getContentPane().add(statusPanel, java.awt.BorderLayout.PAGE_END);
 
@@ -234,6 +258,7 @@ public class JOndra extends javax.swing.JFrame {
         
         m.setGreenLed(GreenLed);
         m.setYellowLed(YellowLed);        
+        m.setTapeLed(TapeLed);        
 
         getContentPane().add(scr, BorderLayout.CENTER);
         pack();
@@ -289,6 +314,7 @@ public class JOndra extends javax.swing.JFrame {
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel GreenLed;
+    private javax.swing.JLabel TapeLed;
     private javax.swing.JToolBar ToolBar;
     private javax.swing.JLabel YellowLed;
     private javax.swing.JButton bNmi;
@@ -297,13 +323,15 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JButton bReset;
     private javax.swing.JButton bSettings;
     private javax.swing.JToolBar.Separator jSeparator1;
-    private javax.swing.JSeparator jSeparator10;
-    private javax.swing.JSeparator jSeparator11;
-    private javax.swing.JToolBar.Separator jSeparator12;
-    private javax.swing.JToolBar.Separator jSeparator13;
-    private javax.swing.JToolBar.Separator jSeparator14;
-    private javax.swing.JToolBar.Separator jSeparator15;
     private javax.swing.JToolBar.Separator jSeparator2;
+    private javax.swing.JToolBar.Separator jSeparator3;
+    private javax.swing.JSeparator jSeparator31;
+    private javax.swing.JSeparator jSeparator32;
+    private javax.swing.JSeparator jSeparator33;
+    private javax.swing.JSeparator jSeparator34;
+    private javax.swing.JToolBar.Separator jSeparator4;
+    private javax.swing.JToolBar.Separator jSeparator5;
+    private javax.swing.JToolBar.Separator jSeparator6;
     private javax.swing.JPanel statusPanel;
     // End of variables declaration//GEN-END:variables
 
