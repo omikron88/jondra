@@ -13,6 +13,7 @@ import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JLabel;
+import utils.TapeSignalProc;
 import utils.WavFile;
 import utils.WavFileException;
 import z80core.Z80;
@@ -53,7 +54,8 @@ public class Ondra extends Thread
     private File loadF = null;
     private boolean tape = false;
     private int tbuff[] = new int[1];
-    private int lastt;
+//    private int lastt;
+    private TapeSignalProc tsp;
     private int sampleT;
     
     public Ondra() {
@@ -71,6 +73,8 @@ public class Ondra extends Thread
         dispAdr = new int[10240];
         genDispTables();
 
+        tsp = new TapeSignalProc(64);
+        
         paused = true;
         
         Reset(true);
@@ -337,13 +341,16 @@ public class Ondra extends Thread
             Logger.getLogger(Ondra.class.getName()).log(Level.WARNING, null, ex);
         }
 //        System.out.println(tbuff[0]);
-        if (tbuff[0]>(lastt+cfg.getTapeSens())) {
-            mem.setTapeIn(true);
-        }
-        if (tbuff[0]<(lastt-cfg.getTapeSens())) {
-            mem.setTapeIn(false);
-        }
-        lastt = tbuff[0];
+
+//        if (tbuff[0]>(lastt+cfg.getTapeSens())) {
+//            mem.setTapeIn(true);
+//        }
+//        if (tbuff[0]<(lastt-cfg.getTapeSens())) {
+//            mem.setTapeIn(false);
+//    }
+//        lastt = tbuff[0];
+  
+          mem.setTapeIn(tsp.addSample(tbuff[0]));  
     }
     
     public void openLoadTape(String canonicalPath) throws 
