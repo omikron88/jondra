@@ -73,7 +73,7 @@ public class Ondra extends Thread
         dispAdr = new int[10240];
         genDispTables();
 
-        tsp = new TapeSignalProc(64);
+        tsp = new TapeSignalProc(256);
         
         paused = true;
         
@@ -219,6 +219,9 @@ public class Ondra extends Thread
     public int peek8(int address) {
         clk.addTstates(3);
         int value = mem.readByte(address) & 0xff;
+//        if (address==0xffff) {
+//        System.out.println(String.format("Peek: %04X,%02X (%04X)", address,value,cpu.getRegPC()));            
+//        }
         return value;
     }
 
@@ -319,8 +322,8 @@ public class Ondra extends Thread
 
     @Override
     public int atAddress(int address, int opcode) {
-        System.out.println(String.format("bp: %04X,%02X", address,opcode));
-        System.out.println(String.format("HL: %04X DE: %04X", cpu.getRegHL(),cpu.getRegDE()));
+//        System.out.println(String.format("bp: %04X,%02X", address,opcode));
+//        System.out.println(String.format("HL: %04X DE: %04X", cpu.getRegHL(),cpu.getRegDE()));
         
         return opcode;
     }

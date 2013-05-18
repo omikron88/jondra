@@ -42,29 +42,15 @@ public final class Memory {
     }
 
     void setTapeIn(boolean x) {
-        if (x) {
-            IOVect[0] |= tapes;
-            IOVect[1] |= tapes;
-            IOVect[2] |= tapes;
-            IOVect[3] |= tapes;
-            IOVect[4] |= tapes;
-            IOVect[5] |= tapes;
-            IOVect[6] |= tapes;
-            IOVect[7] |= tapes;
-            IOVect[8] |= tapes;
-            IOVect[9] |= tapes;
+        if (x) {            
+            for(int n=0; n<PAGE_SIZE; n++) {
+                IOVect[n] |= tapes;                
+            }
         }
         else {
-            IOVect[0] &= taper;
-            IOVect[1] &= taper;
-            IOVect[2] &= taper;
-            IOVect[3] &= taper;
-            IOVect[4] &= taper;
-            IOVect[5] &= taper;
-            IOVect[6] &= taper;
-            IOVect[7] &= taper;
-            IOVect[8] &= taper;
-            IOVect[9] &= taper;            
+            for(int n=0; n<PAGE_SIZE; n++) {
+                IOVect[n] &= taper;                
+            }
         }
     }
     

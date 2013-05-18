@@ -167,10 +167,10 @@ public final class Keyboard implements KeyListener {
                 io[8] &= rb1;
                 break;
 
-            case KeyEvent.VK_NUMPAD2:
+            case KeyEvent.VK_NUMPAD0:
                 io[9] &= rb4;
                 break;
-            case KeyEvent.VK_NUMPAD0:
+            case KeyEvent.VK_NUMPAD2:
                 io[9] &= rb3;
                 break;
             case KeyEvent.VK_NUMPAD8:
@@ -309,10 +309,10 @@ public final class Keyboard implements KeyListener {
                 io[8] |= sb1;
                 break;
             
-            case KeyEvent.VK_NUMPAD2:
+            case KeyEvent.VK_NUMPAD0:
                 io[9] |= sb4;
                 break;
-            case KeyEvent.VK_NUMPAD0:
+            case KeyEvent.VK_NUMPAD2:
                 io[9] |= sb3;
                 break;
             case KeyEvent.VK_NUMPAD8:
