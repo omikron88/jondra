@@ -75,12 +75,6 @@ public class Ondra extends Thread
 
         tsp = new TapeSignalProc(256);
 
-//        try {
-//            CswFile csw = utils.CswFile.openCswFile(new File("pokus.csw"));
-//            csw.close();
-//        } catch (IOException ex) {
-//            Logger.getLogger(Ondra.class.getName()).log(Level.SEVERE, null, ex);
-//        }
         
         paused = true;
         
