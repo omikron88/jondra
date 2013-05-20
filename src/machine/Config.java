@@ -27,15 +27,6 @@ public class Config {
     private String RomA = "";
     private String RomB = "";
     
-    private int TapeSens = 50;
-    
-    public int getTapeSens() {
-        return TapeSens;
-    }
-    
-    public void setTapeSens(int sens) {
-        TapeSens = sens;
-    }
     
     public void setRomType(byte b) {
         if (b!=Rom) {

@@ -24,7 +24,6 @@ public class TapeSignalProc {
         for(int n=0; n<buffsize; n++) {
             buff[n] = init;
         }
-
     }
     
     public boolean addSample(int sample) {

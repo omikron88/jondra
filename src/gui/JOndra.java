@@ -14,7 +14,6 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import machine.Ondra;
-import utils.WavFileException;
 
 /**
  *
@@ -24,10 +23,7 @@ public class JOndra extends javax.swing.JFrame {
     
     private Ondra m;
     private Screen scr;
-    
-    private Icon iRun = new ImageIcon(getClass().getResource("/icons/run.png"));
-    private Icon iPause = new ImageIcon(getClass().getResource("/icons/pause.png"));
-    
+        
     /**
      * Creates new form JOndra
      */
@@ -45,15 +41,17 @@ public class JOndra extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        fc = new javax.swing.JFileChooser();
         ToolBar = new javax.swing.JToolBar();
-        jSeparator1 = new javax.swing.JToolBar.Separator();
         bOpent = new javax.swing.JButton();
+        jSeparator1 = new javax.swing.JToolBar.Separator();
+        bSavet = new javax.swing.JButton();
         jSeparator2 = new javax.swing.JToolBar.Separator();
         bReset = new javax.swing.JButton();
         jSeparator3 = new javax.swing.JToolBar.Separator();
         bNmi = new javax.swing.JButton();
         jSeparator4 = new javax.swing.JToolBar.Separator();
-        bPause = new javax.swing.JButton();
+        bPause = new javax.swing.JToggleButton();
         jSeparator5 = new javax.swing.JToolBar.Separator();
         bSettings = new javax.swing.JButton();
         jSeparator6 = new javax.swing.JToolBar.Separator();
@@ -65,6 +63,8 @@ public class JOndra extends javax.swing.JFrame {
         jSeparator33 = new javax.swing.JSeparator();
         TapeLed = new javax.swing.JLabel();
         jSeparator34 = new javax.swing.JSeparator();
+        bRec = new javax.swing.JToggleButton();
+        jSeparator35 = new javax.swing.JSeparator();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Ondra SPO 186");
@@ -72,7 +72,6 @@ public class JOndra extends javax.swing.JFrame {
 
         ToolBar.setRollover(true);
         ToolBar.setPreferredSize(new java.awt.Dimension(100, 20));
-        ToolBar.add(jSeparator1);
 
         bOpent.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/open.png"))); // NOI18N
         bOpent.setFocusable(false);
@@ -85,6 +84,19 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bOpent);
+        ToolBar.add(jSeparator1);
+
+        bSavet.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/save.png"))); // NOI18N
+        bSavet.setFocusable(false);
+        bSavet.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bSavet.setPreferredSize(new java.awt.Dimension(20, 20));
+        bSavet.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bSavet.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bSavetActionPerformed(evt);
+            }
+        });
+        ToolBar.add(bSavet);
         ToolBar.add(jSeparator2);
 
         bReset.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/reset.png"))); // NOI18N
@@ -112,10 +124,12 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(bNmi);
         ToolBar.add(jSeparator4);
 
-        bPause.setIcon(iRun);
+        bPause.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/pause.png"))); // NOI18N
+        bPause.setSelected(true);
         bPause.setFocusable(false);
         bPause.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bPause.setPreferredSize(new java.awt.Dimension(20, 20));
+        bPause.setPreferredSize(new java.awt.Dimension(16, 16));
+        bPause.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/run.png"))); // NOI18N
         bPause.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
         bPause.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -140,7 +154,7 @@ public class JOndra extends javax.swing.JFrame {
 
         getContentPane().add(ToolBar, java.awt.BorderLayout.PAGE_START);
 
-        statusPanel.setPreferredSize(new java.awt.Dimension(100, 26));
+        statusPanel.setPreferredSize(new java.awt.Dimension(100, 45));
         statusPanel.setLayout(new javax.swing.BoxLayout(statusPanel, javax.swing.BoxLayout.LINE_AXIS));
 
         jSeparator31.setOrientation(javax.swing.SwingConstants.VERTICAL);
@@ -191,6 +205,24 @@ public class JOndra extends javax.swing.JFrame {
         jSeparator34.setRequestFocusEnabled(false);
         statusPanel.add(jSeparator34);
 
+        bRec.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_play.png"))); // NOI18N
+        bRec.setBorderPainted(false);
+        bRec.setFocusPainted(false);
+        bRec.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_rec.png"))); // NOI18N
+        bRec.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bRecActionPerformed(evt);
+            }
+        });
+        statusPanel.add(bRec);
+
+        jSeparator35.setOrientation(javax.swing.SwingConstants.VERTICAL);
+        jSeparator35.setMaximumSize(new java.awt.Dimension(5, 32767));
+        jSeparator35.setMinimumSize(new java.awt.Dimension(3, 16));
+        jSeparator35.setPreferredSize(new java.awt.Dimension(3, 16));
+        jSeparator35.setRequestFocusEnabled(false);
+        statusPanel.add(jSeparator35);
+
         getContentPane().add(statusPanel, java.awt.BorderLayout.PAGE_END);
 
         pack();
@@ -203,17 +235,6 @@ public class JOndra extends javax.swing.JFrame {
     private void bNmiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bNmiActionPerformed
         m.Nmi();
     }//GEN-LAST:event_bNmiActionPerformed
-
-    private void bPauseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bPauseActionPerformed
-        if (m.isPaused()) {
-            bPause.setIcon(iRun);
-            m.startEmulation();
-        }
-        else {
-            bPause.setIcon(iPause);
-            m.stopEmulation();
-        }
-    }//GEN-LAST:event_bPauseActionPerformed
 
     private void bSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bSettingsActionPerformed
         boolean pau = m.isPaused();
@@ -232,7 +253,6 @@ public class JOndra extends javax.swing.JFrame {
         boolean pau = m.isPaused();
         m.stopEmulation();
 
-        final JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("Open tape for LOAD");
         int val = fc.showOpenDialog(this);
         
@@ -241,13 +261,42 @@ public class JOndra extends javax.swing.JFrame {
                 m.openLoadTape(fc.getSelectedFile().getCanonicalPath());
             } catch (IOException ex) {
                 Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (WavFileException ex) {
-                Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 
         if (!pau) m.startEmulation();
     }//GEN-LAST:event_bOpentActionPerformed
+
+    private void bSavetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bSavetActionPerformed
+        boolean pau = m.isPaused();
+        m.stopEmulation();
+
+        fc.setDialogTitle("Open tape for SAVE");
+        int val = fc.showSaveDialog(this);
+        
+        if (val==JFileChooser.APPROVE_OPTION) {
+            try {
+                m.openSaveTape(fc.getSelectedFile().getCanonicalPath());
+            } catch (IOException ex) {
+                Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        if (!pau) m.startEmulation();
+    }//GEN-LAST:event_bSavetActionPerformed
+
+    private void bPauseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bPauseActionPerformed
+        if (bPause.isSelected()) {
+            m.startEmulation();
+        } 
+        else {
+            m.stopEmulation();
+        }
+    }//GEN-LAST:event_bPauseActionPerformed
+
+    private void bRecActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bRecActionPerformed
+        m.setTapeMode(bRec.isSelected());
+    }//GEN-LAST:event_bRecActionPerformed
 
     private void initEmulator() {
         m = new Ondra();
@@ -319,9 +368,12 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JLabel YellowLed;
     private javax.swing.JButton bNmi;
     private javax.swing.JButton bOpent;
-    private javax.swing.JButton bPause;
+    private javax.swing.JToggleButton bPause;
+    private javax.swing.JToggleButton bRec;
     private javax.swing.JButton bReset;
+    private javax.swing.JButton bSavet;
     private javax.swing.JButton bSettings;
+    private javax.swing.JFileChooser fc;
     private javax.swing.JToolBar.Separator jSeparator1;
     private javax.swing.JToolBar.Separator jSeparator2;
     private javax.swing.JToolBar.Separator jSeparator3;
@@ -329,6 +381,7 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JSeparator jSeparator32;
     private javax.swing.JSeparator jSeparator33;
     private javax.swing.JSeparator jSeparator34;
+    private javax.swing.JSeparator jSeparator35;
     private javax.swing.JToolBar.Separator jSeparator4;
     private javax.swing.JToolBar.Separator jSeparator5;
     private javax.swing.JToolBar.Separator jSeparator6;

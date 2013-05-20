@@ -7,15 +7,10 @@ package machine;
 import gui.Screen;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.File;
-import java.io.IOException;
 import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JLabel;
-import utils.TapeSignalProc;
-import utils.WavFile;
-import utils.WavFileException;
 import z80core.Z80;
 
 /**
@@ -23,7 +18,7 @@ import z80core.Z80;
  * @author Administrator
  */
 public class Ondra extends Thread 
- implements z80core.MemIoOps, z80core.NotifyOps, ClockTimeoutListener {
+ implements z80core.MemIoOps, z80core.NotifyOps {
     
     private final int T_DMAOFF = 40000;
     private final int T_DMAON  = 10000;
@@ -36,10 +31,11 @@ public class Ondra extends Thread
     private Memory mem;
     private Timer tim;
     private MTimer task;
-    private Clock clk;
+    public  Clock clk;
     private Z80 cpu;
+    private Tape tap;
     
-    private JLabel GreenLed, YellowLed, TapeLed;
+    public JLabel GreenLed, YellowLed, TapeLed;
     
     private boolean paused;
     
@@ -50,13 +46,7 @@ public class Ondra extends Thread
    
     private int t_frame = T_DMAOFF;
     
-    private WavFile wav = null;
-    private File loadF = null;
-    private boolean tape = false;
-    private int tbuff[] = new int[1];
-//    private int lastt;
-    private TapeSignalProc tsp;
-    private int sampleT;
+    private boolean tapestart;
     
     public Ondra() {
         img = new BufferedImage(320, 256, BufferedImage.TYPE_BYTE_BINARY);
@@ -72,14 +62,11 @@ public class Ondra extends Thread
         key = new Keyboard(iov);
         dispAdr = new int[10240];
         genDispTables();
-
-        tsp = new TapeSignalProc(256);
-
+        tap = new Tape(this);
         
         paused = true;
         
         Reset(true);
-        clk.addClockTimeoutListener(this);
     }
     
     public void setConfig(Config c) {
@@ -119,6 +106,7 @@ public class Ondra extends Thread
 
     public final void Reset(boolean dirty) {
         portA3 = portA0 = 0;
+        tapestart = false;
         t_frame = T_DMAOFF;
         mem.Reset(dirty);
         mem.mapRom(true);
@@ -299,18 +287,15 @@ public class Ondra extends Thread
                 YellowLed.setEnabled(false);
             }
             if ((portA0&0x10)!=0) {
-                if ((wav!=null) && (!tape)) {
-                 clk.addClockTimeoutListener(this);
-                 clk.setTimeout(sampleT);
-                 tape = true;
-                 TapeLed.setEnabled(true);
+                if (!tapestart) {
+                 tapestart = true;
+                 tap.tapeStart();
                 }
             }
             else {
-                if (tape) {
-                    clk.removeClockTimeoutListener(this);
-                    tape = false;
-                    TapeLed.setEnabled(false);
+                if (tapestart) {
+                    tapestart = false;
+                    tap.tapeStop();
                 }
             }
         }
@@ -333,39 +318,16 @@ public class Ondra extends Thread
     public void execDone() {
     
     }
-
-    @Override
-    public void clockTimeout() {
-        clk.setTimeout(sampleT);
-        try {
-            wav.readFrames(tbuff, 1);
-        } catch (IOException ex) {
-            Logger.getLogger(Ondra.class.getName()).log(Level.WARNING, null, ex);
-        } catch (WavFileException ex) {
-            Logger.getLogger(Ondra.class.getName()).log(Level.WARNING, null, ex);
-        }
-//        System.out.println(tbuff[0]);
-
-//        if (tbuff[0]>(lastt+cfg.getTapeSens())) {
-//            mem.setTapeIn(true);
-//        }
-//        if (tbuff[0]<(lastt-cfg.getTapeSens())) {
-//            mem.setTapeIn(false);
-//    }
-//        lastt = tbuff[0];
-  
-          mem.setTapeIn(tsp.addSample(tbuff[0]));  
-    }
     
-    public void openLoadTape(String canonicalPath) throws 
-                                IOException, WavFileException {
-        if (wav!=null) {
-            wav.close();
-            wav = null;
-        }
-        loadF = new File(canonicalPath);
-        wav = utils.WavFile.openWavFile(loadF);
-        wav.display();
-        sampleT = (int) (2e6 / wav.getSampleRate());
+    public void openLoadTape(String canonicalPath) {
+        tap.openLoadTape(canonicalPath);
+    }
+
+    public void openSaveTape(String canonicalPath) {
+        tap.openSaveTape(canonicalPath);
+    }
+
+    public void setTapeMode(boolean rec) {
+        tap.setTapeMode(rec);
     }
 }

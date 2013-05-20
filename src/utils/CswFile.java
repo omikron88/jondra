@@ -4,10 +4,10 @@
  */
 package utils;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -79,6 +79,7 @@ public class CswFile {
 
             csw.rate = getLong(csw.r);
             csw.pulses = getLong(csw.r);
+            csw.changed = false;
             
             csw.r.read(tmp, 0, 3);
             if (tmp[0]!=1) {
@@ -162,6 +163,10 @@ public class CswFile {
                 len = 1;
             }
         }
+    }
+    
+    public long getSampleRate() {
+        return rate;
     }
     
     private void updateCount() {
