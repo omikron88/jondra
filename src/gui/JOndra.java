@@ -77,6 +77,7 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.setPreferredSize(new java.awt.Dimension(100, 20));
 
         bOpent.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/open.png"))); // NOI18N
+        bOpent.setToolTipText("Open tape for Load");
         bOpent.setFocusable(false);
         bOpent.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         bOpent.setPreferredSize(new java.awt.Dimension(20, 20));
@@ -90,6 +91,7 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(jSeparator1);
 
         bSavet.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/save.png"))); // NOI18N
+        bSavet.setToolTipText("Open tape for Save");
         bSavet.setFocusable(false);
         bSavet.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         bSavet.setPreferredSize(new java.awt.Dimension(20, 20));
@@ -103,6 +105,7 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(jSeparator2);
 
         bReset.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/reset.png"))); // NOI18N
+        bReset.setToolTipText("Reset");
         bReset.setFocusable(false);
         bReset.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         bReset.setPreferredSize(new java.awt.Dimension(20, 20));
@@ -115,6 +118,7 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(jSeparator3);
 
         bNmi.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/nmi.png"))); // NOI18N
+        bNmi.setToolTipText("NMI");
         bNmi.setFocusable(false);
         bNmi.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         bNmi.setPreferredSize(new java.awt.Dimension(20, 20));
@@ -129,6 +133,7 @@ public class JOndra extends javax.swing.JFrame {
 
         bPause.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/pause.png"))); // NOI18N
         bPause.setSelected(true);
+        bPause.setToolTipText("Run/Pause");
         bPause.setFocusable(false);
         bPause.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         bPause.setPreferredSize(new java.awt.Dimension(16, 16));
@@ -143,6 +148,7 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(jSeparator5);
 
         bSettings.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/settings.png"))); // NOI18N
+        bSettings.setToolTipText("Settings");
         bSettings.setFocusable(false);
         bSettings.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         bSettings.setPreferredSize(new java.awt.Dimension(20, 20));
@@ -197,6 +203,7 @@ public class JOndra extends javax.swing.JFrame {
 
         TapeLed.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         TapeLed.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/tape.png"))); // NOI18N
+        TapeLed.setToolTipText("Tape runs");
         TapeLed.setEnabled(false);
         TapeLed.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         statusPanel.add(TapeLed);
@@ -209,6 +216,7 @@ public class JOndra extends javax.swing.JFrame {
         statusPanel.add(jSeparator34);
 
         bRec.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_play.png"))); // NOI18N
+        bRec.setToolTipText("Play - Record switch");
         bRec.setBorderPainted(false);
         bRec.setFocusPainted(false);
         bRec.setFocusable(false);
