@@ -17,7 +17,7 @@ public class CswFile {
     
     private final String sig = "Compressed Square Wave";
     private final String app = "JOndra emulator\0"; // must be 16B exactly
-    private final long defrate = 11025;
+    private final long defrate = 22050;
     
     private enum IOState {CLOSED, CREATE, READ, WRITE};
     
@@ -85,10 +85,12 @@ public class CswFile {
             if (tmp[0]!=1) {
                 throw new IOException("Unsupported compression");
             }
+            csw.r.skipBytes(16);
             
             if (tmp[2]!=0) {
-                csw.r.seek(csw.r.skipBytes((int) (tmp[2] & 0xff)));
+                csw.r.skipBytes((int) (tmp[2] & 0xff));
             }
+            
             
             csw.state = IOState.READ;
         }

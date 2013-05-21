@@ -98,6 +98,9 @@ public class Tape implements ClockTimeoutListener {
             if (sst==st.CSW) {
                 m.clk.setTimeout(srate);
                 scsw.writeSample((m.portA3&0x08)!=0);
+            } 
+            else {
+                m.clk.setTimeout(512);
             }
         }
         else {
@@ -133,5 +136,4 @@ public class Tape implements ClockTimeoutListener {
             }
         }
     }
-
 }
