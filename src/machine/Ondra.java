@@ -11,6 +11,7 @@ import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JLabel;
+import javax.swing.JToggleButton;
 import z80core.Z80;
 
 /**
@@ -28,7 +29,7 @@ public class Ondra extends Thread
     private byte px[];
     private Config cfg;
     private Keyboard key;
-    private Memory mem;
+    public  Memory mem;
     private Timer tim;
     private MTimer task;
     public  Clock clk;
@@ -36,12 +37,13 @@ public class Ondra extends Thread
     private Tape tap;
     
     public JLabel GreenLed, YellowLed, TapeLed;
+    public JToggleButton RecButton;
     
     private boolean paused;
     
     private int dispAdr[];
     
-    private byte portA0, portA1, portA3;
+    public  byte portA0, portA1, portA3;
     private byte iov[];
    
     private int t_frame = T_DMAOFF;
@@ -104,15 +106,20 @@ public class Ondra extends Thread
         TapeLed = led;
     }
 
+    public void setRecButton(JToggleButton b) {
+        RecButton = b;
+    }
+
     public final void Reset(boolean dirty) {
         portA3 = portA0 = 0;
-        tapestart = false;
         t_frame = T_DMAOFF;
         mem.Reset(dirty);
         mem.mapRom(true);
         clk.reset();
         cpu.reset();
         key.Reset();
+        tapestart = false;
+        if (RecButton!=null) { tap.tapeStop(); }
     }
     
     public final void Nmi() {
@@ -329,5 +336,9 @@ public class Ondra extends Thread
 
     public void setTapeMode(boolean rec) {
         tap.setTapeMode(rec);
+    }
+
+    public void closeClenaup() {
+        tap.closeCleanup();
     }
 }

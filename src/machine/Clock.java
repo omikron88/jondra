@@ -53,8 +53,8 @@ public class Clock {
             throw new NullPointerException("Internal Error: Listener can't be null");
         }
 
-        if (!clockListeners.remove(listener)) {
-            throw new IllegalArgumentException("Internal Error: Listener was not listening on object");
+        if (clockListeners.contains(listener)) {
+            clockListeners.remove(listener);
         }
     }
 

@@ -14,7 +14,7 @@ import utils.WavFile;
  *
  * @author admin
  */
-public class Tape {
+public class Tape implements ClockTimeoutListener {
     
     private Ondra m;
     private TapeSignalProc tsp;
@@ -23,7 +23,7 @@ public class Tape {
     private File LoadTape, SaveTape;
     private CswFile lcsw, scsw;
     private WavFile lwav;
-    private long lrate, srate;
+    private int lrate, srate;
 
     private enum st {CLOSE, CSW, WAV};
     private st lst, sst;
@@ -41,13 +41,13 @@ public class Tape {
         if (LoadTape.exists()) {
             try {
                 lcsw = CswFile.openCswFile(LoadTape);
-                lrate = lcsw.getSampleRate();
+                lrate = (int) (2e6 / lcsw.getSampleRate());
                 lst = st.CSW;
             } catch (IOException ex) {
                 lst = st.CLOSE;
                 try {
                     lwav = WavFile.openWavFile(LoadTape);
-                    lrate = lwav.getSampleRate();
+                    lrate = (int) (2e6 / lwav.getSampleRate());
                     lst = st.WAV;
                 } catch (Exception ex1) {
                     lst = st.CLOSE;
@@ -57,11 +57,19 @@ public class Tape {
     }
 
     public void openSaveTape(String canonicalPath) {
+        if (sst==st.CSW) {
+            try {
+                scsw.close();
+            } catch (IOException ex) {
+            }
+         }
+        
         SaveTape = new File(canonicalPath);
         try {
-            scsw = CswFile.openCswFile(LoadTape);
-            srate = scsw.getSampleRate();
+            scsw = CswFile.openCswFile(SaveTape);
+            srate = (int) (2e6 / scsw.getSampleRate());
             sst = st.CSW;
+            scsw.setRecord(true);
         } catch (IOException ex) {
             sst = st.CLOSE;
         }
@@ -69,15 +77,61 @@ public class Tape {
 
     public void tapeStart() {
         m.TapeLed.setEnabled(true);
-        
+        m.RecButton.setEnabled(false);
+        m.clk.addClockTimeoutListener(this);
+        m.clk.setTimeout(512);
     }
 
     public void tapeStop() {
         m.TapeLed.setEnabled(false);
-        
+        m.RecButton.setEnabled(true);
+        m.clk.removeClockTimeoutListener(this);
     }
 
     void setTapeMode(boolean rec) {
-        
+        record = rec;
     }
+
+@Override
+    public void clockTimeout() {
+        if (record) {
+            if (sst==st.CSW) {
+                m.clk.setTimeout(srate);
+                scsw.writeSample((m.portA3&0x08)!=0);
+            }
+        }
+        else {
+            switch (lst) {
+                case CSW: {
+                    m.clk.setTimeout(lrate);
+                    m.mem.setTapeIn(lcsw.readSample());
+                    break;
+                }
+                
+                case WAV: {
+                    m.clk.setTimeout(lrate);
+                    try {
+                        lwav.readFrames(tbuff, 1);
+                    } catch (Exception ex) {
+                    }
+                    m.mem.setTapeIn(tsp.addSample(tbuff[0]));
+                    break;
+                }
+                
+                default: {
+                    m.clk.setTimeout(512);
+                }    
+            }
+        }
+    }
+
+    public void closeCleanup() {
+        if (sst==st.CSW) {
+            try {
+                scsw.close();
+            } catch (IOException ex) {
+            }
+        }
+    }
+
 }

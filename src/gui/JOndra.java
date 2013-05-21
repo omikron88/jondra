@@ -1,4 +1,4 @@
-/*
+/*0
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
@@ -10,8 +10,6 @@ import java.awt.Toolkit;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import machine.Ondra;
 
@@ -27,7 +25,7 @@ public class JOndra extends javax.swing.JFrame {
     /**
      * Creates new form JOndra
      */
-    public JOndra() {
+    public JOndra() {     
         initComponents();
         initEmulator();
     }
@@ -69,6 +67,11 @@ public class JOndra extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Ondra SPO 186");
         setResizable(false);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                formWindowClosing(evt);
+            }
+        });
 
         ToolBar.setRollover(true);
         ToolBar.setPreferredSize(new java.awt.Dimension(100, 20));
@@ -208,6 +211,7 @@ public class JOndra extends javax.swing.JFrame {
         bRec.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_play.png"))); // NOI18N
         bRec.setBorderPainted(false);
         bRec.setFocusPainted(false);
+        bRec.setFocusable(false);
         bRec.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_rec.png"))); // NOI18N
         bRec.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -298,6 +302,10 @@ public class JOndra extends javax.swing.JFrame {
         m.setTapeMode(bRec.isSelected());
     }//GEN-LAST:event_bRecActionPerformed
 
+    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+        m.closeClenaup();
+    }//GEN-LAST:event_formWindowClosing
+
     private void initEmulator() {
         m = new Ondra();
         scr = new Screen();
@@ -307,7 +315,8 @@ public class JOndra extends javax.swing.JFrame {
         
         m.setGreenLed(GreenLed);
         m.setYellowLed(YellowLed);        
-        m.setTapeLed(TapeLed);        
+        m.setTapeLed(TapeLed);
+        m.setRecButton(bRec);
 
         getContentPane().add(scr, BorderLayout.CENTER);
         pack();
