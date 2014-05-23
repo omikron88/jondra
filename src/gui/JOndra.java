@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import machine.Ondra;
 
 /**
@@ -53,6 +54,10 @@ public class JOndra extends javax.swing.JFrame {
         jSeparator5 = new javax.swing.JToolBar.Separator();
         bSettings = new javax.swing.JButton();
         jSeparator6 = new javax.swing.JToolBar.Separator();
+        bOpens = new javax.swing.JButton();
+        jSeparator7 = new javax.swing.JToolBar.Separator();
+        bSaves = new javax.swing.JButton();
+        jSeparator8 = new javax.swing.JToolBar.Separator();
         statusPanel = new javax.swing.JPanel();
         jSeparator31 = new javax.swing.JSeparator();
         GreenLed = new javax.swing.JLabel();
@@ -161,6 +166,35 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(bSettings);
         ToolBar.add(jSeparator6);
 
+        bOpens.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/osn_open.png"))); // NOI18N
+        bOpens.setToolTipText("Open snapshot");
+        bOpens.setFocusable(false);
+        bOpens.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bOpens.setPreferredSize(new java.awt.Dimension(20, 20));
+        bOpens.setRequestFocusEnabled(false);
+        bOpens.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bOpens.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bOpensActionPerformed(evt);
+            }
+        });
+        ToolBar.add(bOpens);
+        ToolBar.add(jSeparator7);
+
+        bSaves.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/osn_save.png"))); // NOI18N
+        bSaves.setToolTipText("Save snapshot");
+        bSaves.setFocusable(false);
+        bSaves.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bSaves.setPreferredSize(new java.awt.Dimension(20, 20));
+        bSaves.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bSaves.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bSavesActionPerformed(evt);
+            }
+        });
+        ToolBar.add(bSaves);
+        ToolBar.add(jSeparator8);
+
         getContentPane().add(ToolBar, java.awt.BorderLayout.PAGE_START);
 
         statusPanel.setPreferredSize(new java.awt.Dimension(100, 45));
@@ -266,6 +300,7 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open tape for LOAD");
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra tapes", "wav", "csw"));
         int val = fc.showOpenDialog(this);
         
         if (val==JFileChooser.APPROVE_OPTION) {
@@ -284,6 +319,7 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open tape for SAVE");
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra compressed tape", "csw"));
         int val = fc.showSaveDialog(this);
         
         if (val==JFileChooser.APPROVE_OPTION) {
@@ -313,6 +349,44 @@ public class JOndra extends javax.swing.JFrame {
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         m.closeClenaup();
     }//GEN-LAST:event_formWindowClosing
+
+    private void bOpensActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bOpensActionPerformed
+        boolean pau = m.isPaused();
+        m.stopEmulation();
+
+        fc.setDialogTitle("Open snapshot");
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra snapshots", "osn"));
+        int val = fc.showOpenDialog(this);
+        
+        if (val==JFileChooser.APPROVE_OPTION) {
+            try {
+                m.loadSnapshot(fc.getSelectedFile().getCanonicalPath());
+            } catch (IOException ex) {
+                Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        if (!pau) m.startEmulation();
+    }//GEN-LAST:event_bOpensActionPerformed
+
+    private void bSavesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bSavesActionPerformed
+        boolean pau = m.isPaused();
+        m.stopEmulation();
+
+        fc.setDialogTitle("Save snapshot");
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra snapshots", "osn"));
+        int val = fc.showSaveDialog(this);
+        
+        if (val==JFileChooser.APPROVE_OPTION) {
+            try {
+                m.saveSnapshot(fc.getSelectedFile().getCanonicalPath());
+            } catch (IOException ex) {
+                Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        if (!pau) m.startEmulation();
+    }//GEN-LAST:event_bSavesActionPerformed
 
     private void initEmulator() {
         m = new Ondra();
@@ -384,10 +458,12 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JToolBar ToolBar;
     private javax.swing.JLabel YellowLed;
     private javax.swing.JButton bNmi;
+    private javax.swing.JButton bOpens;
     private javax.swing.JButton bOpent;
     private javax.swing.JToggleButton bPause;
     private javax.swing.JToggleButton bRec;
     private javax.swing.JButton bReset;
+    private javax.swing.JButton bSaves;
     private javax.swing.JButton bSavet;
     private javax.swing.JButton bSettings;
     private javax.swing.JFileChooser fc;
@@ -402,6 +478,8 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JToolBar.Separator jSeparator4;
     private javax.swing.JToolBar.Separator jSeparator5;
     private javax.swing.JToolBar.Separator jSeparator6;
+    private javax.swing.JToolBar.Separator jSeparator7;
+    private javax.swing.JToolBar.Separator jSeparator8;
     private javax.swing.JPanel statusPanel;
     // End of variables declaration//GEN-END:variables
 

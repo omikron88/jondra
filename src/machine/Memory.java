@@ -248,10 +248,10 @@ public final class Memory {
         }
 
         if (!loadRomAsFile(rd+cf.getViLiA(), Vili, 0, PAGE_SIZE * 1)) {
-            loadRomAsResource("/roms/Ondra_ViLi_a.rom", Vili, 0, PAGE_SIZE * 1);
+            loadRomAsResource("/roms/Ondra_ViLi_v27_a.rom", Vili, 0, PAGE_SIZE * 1);
         }
         if (!loadRomAsFile(rd+cf.getTeslaB(), Vili, 1, PAGE_SIZE * 1)) {
-            loadRomAsResource("/roms/Ondra_ViLi_b.rom", Vili, 1, PAGE_SIZE * 1);
+            loadRomAsResource("/roms/Ondra_ViLi_v27_b.rom", Vili, 1, PAGE_SIZE * 1);
         }
     }
 
@@ -362,6 +362,70 @@ public final class Memory {
             System.out.println(String.format("%s: %s", msg, filename));
         }
 
+        return res;
+    }
+
+    public boolean loadSnapshotRam(BufferedInputStream fIn) {
+        boolean res = true;
+        int i;
+
+        for (i=0; i<32; i++) {
+            try {
+                fIn.read(Ram[i]);
+            } catch (IOException ex) {
+                Logger.getLogger(Memory.class.getName()).log(Level.SEVERE, null, ex);
+                res = false;
+                break;
+            }
+        }
+        return res;
+    }
+
+    public boolean saveSnapshotRam(BufferedOutputStream fOut) {
+        boolean res = true;
+        int i;
+
+        for (i=0; i<32; i++) {
+            try {
+                fOut.write(Ram[i]);
+            } catch (IOException ex) {
+                Logger.getLogger(Memory.class.getName()).log(Level.SEVERE, null, ex);
+                res = false;
+                break;
+            }
+        }
+        return res;
+    }
+
+    public boolean loadSnapshotCustomRom(BufferedInputStream fIn) {
+        boolean res = true;
+        int i;
+
+        for (i=0; i<8; i++) {
+            try {
+                fIn.read(Cust[i]);
+            } catch (IOException ex) {
+                Logger.getLogger(Memory.class.getName()).log(Level.SEVERE, null, ex);
+                res = false;
+                break;
+            }
+        }
+        return res;
+    }
+
+    public boolean saveSnapshotCustomRom(BufferedOutputStream fOut) {
+        boolean res = true;
+        int i;
+
+        for (i=0; i<8; i++) {
+            try {
+                fOut.write(Cust[i]);
+            } catch (IOException ex) {
+                Logger.getLogger(Memory.class.getName()).log(Level.SEVERE, null, ex);
+                res = false;
+                break;
+            }
+        }
         return res;
     }
 }

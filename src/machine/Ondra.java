@@ -7,12 +7,14 @@ package machine;
 import gui.Screen;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.io.*;
 import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JLabel;
 import javax.swing.JToggleButton;
 import z80core.Z80;
+import z80core.Z80State;
 
 /**
  *
@@ -23,6 +25,8 @@ public class Ondra extends Thread
     
     private final int T_DMAOFF = 40000;
     private final int T_DMAON  = 10000;
+    
+    private final int OSN_VERSION = 0x01; //version 0.1
     
     private Screen scr;
     private BufferedImage img;
@@ -163,7 +167,7 @@ public class Ondra extends Thread
                 vm = (y >>> 1) | ((y&1) << 7) | x;
                 dispAdr[vm - 0xd800] = adr;
 //                System.out.println(String.format("%04X", vm));
-                px[adr++] = mem.readRam((y >>> 1) | ((y&1) << 7) | x ) ;
+                px[adr++] = mem.readRam(vm) ;
             }
         }
     }
@@ -247,8 +251,7 @@ public class Ondra extends Thread
     @Override
     public int inPort(int port) {
         clk.addTstates(4);
-        port &= 0xff;
-//        System.out.println(String.format("In: %02X (%04X)", port,cpu.getRegPC()));
+//        System.out.println(String.format("In: %04X (PC=%04X, portA0=%02X, portA1=%02X, portA3=%02X)", port,cpu.getRegPC(), portA0, portA1, portA3));
         return 0xff;
     }
 
@@ -340,5 +343,210 @@ public class Ondra extends Thread
 
     public void closeClenaup() {
         tap.closeCleanup();
+    }
+
+    public final void loadSnapshot(String filename) {
+        BufferedInputStream fIn;
+        boolean res = false;
+        int i=0, cnt=0, tmp;
+        int version;
+        
+        try {
+            fIn = new BufferedInputStream(new FileInputStream(filename));
+            
+            Z80State state = new Z80State();
+            try {
+                tmp = fIn.read();	//O
+                tmp = fIn.read();	//S
+                tmp = fIn.read();	//N skip those (for now without checking)
+                version = fIn.read();
+                state.setRegI(fIn.read());
+                state.setRegLx(fIn.read());
+                state.setRegHx(fIn.read());
+                state.setRegEx(fIn.read());
+                state.setRegDx(fIn.read());
+                state.setRegCx(fIn.read());
+                state.setRegBx(fIn.read());
+                state.setRegFx(fIn.read());
+                state.setRegAx(fIn.read());
+                state.setRegL(fIn.read());
+                state.setRegH(fIn.read());
+                state.setRegE(fIn.read());
+                state.setRegD(fIn.read());
+                state.setRegC(fIn.read());
+                state.setRegB(fIn.read());
+                
+                tmp = fIn.read();
+                tmp |= (fIn.read() << 8);
+                state.setRegIY(tmp);
+                tmp = fIn.read();
+                tmp |= (fIn.read() << 8);
+                state.setRegIX(tmp);
+                
+                tmp = fIn.read();
+                state.setIFF1((tmp & 1) != 0);
+                state.setIFF2((tmp & 2) != 0);
+                state.setPendingEI((tmp & 4) != 0);
+                state.setNMI((tmp & 8) != 0);
+                state.setINTLine((tmp & 16) != 0);
+                state.setHalted((tmp & 32) != 0);
+                
+                state.setRegR(fIn.read());
+                state.setRegF(fIn.read());
+                state.setRegA(fIn.read());
+                
+                tmp = fIn.read();
+                tmp |= (fIn.read() << 8);
+                state.setRegSP(tmp);
+                tmp = fIn.read();
+                tmp |= (fIn.read() << 8);
+                state.setRegPC(tmp);
+                
+                switch (fIn.read()) {
+                    case 0: state.setIM(Z80.IntMode.IM0); break;
+                    case 1: state.setIM(Z80.IntMode.IM1); break;
+                    case 2: state.setIM(Z80.IntMode.IM2); break;
+                }
+                
+                tmp = fIn.read();
+                tmp |= (fIn.read() << 8);
+                state.setMemPtr(tmp);
+                
+                //cpu_debug("read");
+                
+                cpu.setZ80State(state);
+                
+                outPort(0x0e, fIn.read());
+                outPort(0x0d, fIn.read());
+                outPort(0x03, fIn.read());
+                
+                cfg.setRomType((byte)fIn.read());
+                
+                //cpu_debug("read");
+            } catch (IOException ex) {
+                Logger.getLogger(Ondra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            if (cfg.getRomType() == cfg.CUSTOM) {
+                res = mem.loadSnapshotCustomRom(fIn);
+            }
+            res = mem.loadSnapshotRam(fIn);
+            
+            for (i=0xd800; i<0x10000; i++) {
+                processVram(i, mem.readRam(i));
+            }
+            
+            try {
+                fIn.close();
+            } catch (IOException ex) {
+                Logger.getLogger(Ondra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } catch (FileNotFoundException ex) {
+            String msg =
+                java.util.ResourceBundle.getBundle("machine/Bundle").getString(
+                "FILE_RAM_ERROR");
+            System.out.println(String.format("%s: %s", msg, filename));
+            //Logger.getLogger(Spectrum.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public final void saveSnapshot(String filename) {
+        BufferedOutputStream fOut;
+        boolean res = false;
+        int i=0, cnt=0;
+        
+        try {
+            fOut = new BufferedOutputStream(new FileOutputStream(filename));
+            
+            Z80State state = cpu.getZ80State();
+            try {
+                fOut.write('O');
+                fOut.write('S');
+                fOut.write('N');
+                fOut.write(OSN_VERSION);
+                fOut.write(state.getRegI());
+                fOut.write(state.getRegLx());
+                fOut.write(state.getRegHx());
+                fOut.write(state.getRegEx());
+                fOut.write(state.getRegDx());
+                fOut.write(state.getRegCx());
+                fOut.write(state.getRegBx());
+                fOut.write(state.getRegFx());
+                fOut.write(state.getRegAx());
+                fOut.write(state.getRegL());
+                fOut.write(state.getRegH());
+                fOut.write(state.getRegE());
+                fOut.write(state.getRegD());
+                fOut.write(state.getRegC());
+                fOut.write(state.getRegB());
+                
+                fOut.write(state.getRegIY() & 0xff);
+                fOut.write((state.getRegIY() >>> 8) & 0xff);
+                fOut.write(state.getRegIX() & 0xff);
+                fOut.write((state.getRegIX() >>> 8) & 0xff);
+                
+                int tmp = 0;
+                if (state.isIFF1())      { tmp |= 1; }
+                if (state.isIFF2())      { tmp |= 2; }
+                if (state.isPendingEI()) { tmp |= 4; }
+                if (state.isNMI())       { tmp |= 8; }
+                if (state.isINTLine())   { tmp |= 16; }
+                if (state.isHalted())    { tmp |= 32; }
+                
+                fOut.write(tmp);
+                
+                fOut.write(state.getRegR());
+                fOut.write(state.getRegF());
+                fOut.write(state.getRegA());
+                
+                fOut.write(state.getRegSP() & 0xff);
+                fOut.write((state.getRegSP() >>> 8) & 0xff);
+                
+                fOut.write(state.getRegPC() & 0xff);
+                fOut.write((state.getRegPC() >>> 8) & 0xff);
+                
+                switch (state.getIM()) {
+                    case IM0: fOut.write(0); break;
+                    case IM1: fOut.write(1); break;
+                    case IM2: fOut.write(2); break;
+                }
+                
+                fOut.write(state.getMemPtr() & 0xff);
+                fOut.write((state.getMemPtr() >>> 8) & 0xff);
+                
+                fOut.write(portA0);
+                fOut.write(portA1);
+                fOut.write(portA3);
+                
+                fOut.write(cfg.getRomType());
+                
+                //cpu_debug("write");
+            } catch (IOException ex) {
+                Logger.getLogger(Ondra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            if (cfg.getRomType() == cfg.CUSTOM) {
+                res = mem.saveSnapshotCustomRom(fOut);
+            }
+            res = mem.saveSnapshotRam(fOut);
+            try {
+                fOut.close();
+            } catch (IOException ex) {
+                Logger.getLogger(Ondra.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } catch (FileNotFoundException ex) {
+            String msg =
+                java.util.ResourceBundle.getBundle("machine/Bundle").getString(
+                "FILE_RAM_ERROR");
+            System.out.println(String.format("%s: %s", msg, filename));
+            //Logger.getLogger(Spectrum.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void cpu_debug(String prefix) {
+        System.out.println(String.format("%10s: AF=%04X  BC=%04X  DE=%04X  HL=%04X", prefix, cpu.getRegAF(), cpu.getRegBC(), cpu.getRegDE(), cpu.getRegHL()));
+        System.out.println(String.format("            AFx=%04X BCx=%04X DEx=%04X HLx=%04X", cpu.getRegAFx(), cpu.getRegBCx(), cpu.getRegDEx(), cpu.getRegHLx()));
+        System.out.println(String.format("            IX=%04X  IY=%04X  SP=%04X  PC=%04X", cpu.getRegIX(), cpu.getRegIY(), cpu.getRegSP(), cpu.getRegPC()));
+        System.out.println(String.format("            0e=%02X  0d=%02X  03=%02X", 
+                portA0, portA1, portA3));
+        System.out.println();
     }
 }

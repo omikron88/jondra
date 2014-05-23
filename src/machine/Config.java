@@ -18,8 +18,8 @@ public class Config {
     private String  BASIC_b = "Ondra_BASICEXP_V5_b.rom";
     private String  TESLA_a = "Ondra_TESLA_V5_a.rom";
     private String  TESLA_b = "Ondra_TESLA_V5_b.rom";
-    private String  VILI_a  = "Ondra_ViLi_a.rom";
-    private String  VILI_b  = "Ondra_ViLi_b.rom";
+    private String  VILI_a  = "Ondra_ViLi_v27_a.rom";
+    private String  VILI_b  = "Ondra_ViLi_v27_b.rom";
 
     private byte Rom = VILI; 
     
