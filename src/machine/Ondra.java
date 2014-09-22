@@ -47,6 +47,7 @@ public class Ondra extends Thread
     
     private int dispAdr[];
     
+    public  boolean dmaEnabled;
     public  byte portA0, portA1, portA3;
     private byte iov[];
    
@@ -66,6 +67,7 @@ public class Ondra extends Thread
         iov = new byte[mem.PAGE_SIZE];
         mem.setIOVect(iov);
         key = new Keyboard(iov);
+        dmaEnabled = true;
         dispAdr = new int[10240];
         genDispTables();
         tap = new Tape(this);
@@ -167,6 +169,7 @@ public class Ondra extends Thread
                 vm = (y >>> 1) | ((y&1) << 7) | x;
                 dispAdr[vm - 0xd800] = adr;
 //                System.out.println(String.format("%04X", vm));
+                //if (dmaEnabled) //not needed as this function is called just from the constructor and in that time dmaEnabled=true
                 px[adr++] = mem.readRam(vm) ;
             }
         }
@@ -201,9 +204,29 @@ public class Ondra extends Thread
     public void processVram(int address, int data) {
         data &= 0xff;
         int x = dispAdr[address - 0xd800];
-        if (x!=-1) {
+        if (x!=-1 && dmaEnabled) {
             px[x] = (byte) data;
 //            scr.repaint(x % 40, x / 40, 8, 1);
+        }
+    }
+    
+    private void dmaEnable() {
+        for (int address=0xd800; address<0x10000; address++) {
+            int x = dispAdr[address - 0xd800];
+            if (x!=-1) {
+                px[x] = mem.readRam(address) ;
+            }
+        }
+        dmaEnabled = true;
+    }
+    
+    private void dmaDisable() {
+        dmaEnabled = false;
+        for (int address=0xd800; address<0x10000; address++) {
+            int x = dispAdr[address - 0xd800];
+            if (x!=-1) {
+                px[x] = 0;
+            }
         }
     }
     
@@ -265,9 +288,11 @@ public class Ondra extends Thread
             portA3 = (byte) value;
             if ((portA3&0x01)==0) {
                 t_frame = T_DMAOFF;
+                dmaDisable();
             }
             else {
                 t_frame = T_DMAON;
+                dmaEnable();
             }
             if ((portA3&0x02)==0) {
                 mem.mapRom(true);
@@ -312,7 +337,7 @@ public class Ondra extends Thread
     }
 
     @Override
-    public void contendedStates(int address, int tstates) {
+    public void contendedStates(int address, long tstates) {
         clk.addTstates(tstates);
     }
 

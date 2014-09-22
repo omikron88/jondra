@@ -12,9 +12,9 @@ import java.util.ConcurrentModificationException;
  * @author jsanchez
  */
 public class Clock {
-    private int tstates;
+    private long tstates;
     private long frames;
-    private int timeout;
+    private long timeout;
     private final ArrayList<ClockTimeoutListener> clockListeners = new ArrayList<ClockTimeoutListener>();
 
     public Clock() {
@@ -61,19 +61,19 @@ public class Clock {
     /**
      * @return the tstates
      */
-    public int getTstates() {
+    public long getTstates() {
         return tstates;
     }
 
     /**
      * @param states the tstates to set
      */
-    public void setTstates(int states) {
+    public void setTstates(long states) {
         tstates = states;
         frames = 0;
     }
 
-    public void addTstates(int states) {
+    public void addTstates(long states) {
         tstates += states;
 
         if (timeout > 0) {
@@ -94,7 +94,7 @@ public class Clock {
         frames = tstates = 0;
     }
 
-    public void setTimeout(int ntstates) {
+    public void setTimeout(long ntstates) {
         timeout = ntstates > 0 ? ntstates : 1;
     }
   

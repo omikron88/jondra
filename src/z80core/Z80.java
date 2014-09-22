@@ -1684,7 +1684,7 @@ public class Z80 {
      * ciclos de máquina reales que se ejecutan. Esa es la única forma de poder
      * simular la contended memory del Spectrum.
      */
-    public final void execute(int statesLimit) {
+    public final void execute(long statesLimit) {
 
         while (clock.getTstates() < statesLimit) {
 
