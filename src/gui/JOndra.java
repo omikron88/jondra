@@ -300,7 +300,11 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open tape for LOAD");
-        fc.setFileFilter(new FileNameExtensionFilter("Ondra tapes", "wav", "csw"));
+        fc.resetChoosableFileFilters();
+        fc.setAcceptAllFileFilterUsed(true);
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra wave tapes", "wav"));
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra compressed wave tapes", "csw"));
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra binary tapes", "tap"));
         int val = fc.showOpenDialog(this);
         
         if (val==JFileChooser.APPROVE_OPTION) {
@@ -319,7 +323,10 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open tape for SAVE");
-        fc.setFileFilter(new FileNameExtensionFilter("Ondra compressed tape", "csw"));
+        fc.resetChoosableFileFilters();
+        fc.setAcceptAllFileFilterUsed(true);
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra compressed wave tapes", "csw"));
+        fc.setFileFilter(new FileNameExtensionFilter("Ondra binary tapes", "tap"));
         int val = fc.showSaveDialog(this);
         
         if (val==JFileChooser.APPROVE_OPTION) {
@@ -355,6 +362,8 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open snapshot");
+        fc.resetChoosableFileFilters();
+        fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra snapshots", "osn"));
         int val = fc.showOpenDialog(this);
         
@@ -374,6 +383,8 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Save snapshot");
+        fc.resetChoosableFileFilters();
+        fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra snapshots", "osn"));
         int val = fc.showSaveDialog(this);
         
