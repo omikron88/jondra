@@ -1,7 +1,5 @@
 JOndra is the emulator of an old home computer Ondra from late 80's Czechoslovakia
-It is written in Java purely and distributed as open-source fan project under GPL2 licence.
-
-Project home: http://code.google.com/p/jondra/
+It is written in Java purely and distributed as open-source fan project under GPL licence.
 
 
 Key mappings
