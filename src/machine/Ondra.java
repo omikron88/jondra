@@ -4,10 +4,12 @@
  */
 package machine;
 
+import gui.Debugger;
 import gui.Screen;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.*;
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +30,7 @@ public class Ondra extends Thread
     
     private final int OSN_VERSION = 0x01; //version 0.1
     
-    private Screen scr;
+    public Screen scr;
     private BufferedImage img;
     private byte px[];
     private Config cfg;
@@ -37,7 +39,7 @@ public class Ondra extends Thread
     private Timer tim;
     private MTimer task;
     public  Clock clk;
-    private Z80 cpu;
+    public Z80 cpu;
     private Tape tap;
     
     public JLabel GreenLed, YellowLed, TapeLed;
@@ -54,6 +56,13 @@ public class Ondra extends Thread
     private int t_frame = T_DMAOFF;
     
     private boolean tapestart;
+    
+    private Debugger deb;
+    
+    private int nRozliseniCnt=0;
+    public int nRozliseni=255;
+    boolean bFrst=false;
+    int nSchdTimer=20;
     
     public Ondra() {
         img = new BufferedImage(320, 256, BufferedImage.TYPE_BYTE_BINARY);
@@ -75,6 +84,14 @@ public class Ondra extends Thread
         paused = true;
         
         Reset(true);
+    }
+    
+    public void setDebugger(Debugger indeb){
+        deb=indeb;
+    }
+    
+    public Debugger getDebugger(){
+        return deb;
     }
     
     public void setConfig(Config c) {
@@ -124,6 +141,9 @@ public class Ondra extends Thread
         clk.reset();
         cpu.reset();
         key.Reset();
+        nRozliseni=255;
+        nRozliseniCnt=0;
+        genDispTables();
         tapestart = false;
         if (RecButton!=null) { tap.tapeStop(); }
     }
@@ -141,7 +161,7 @@ public class Ondra extends Thread
         scr.repaint();
         paused = false;
         task = new MTimer(this);
-        tim.scheduleAtFixedRate(task, 250, 20);
+        tim.scheduleAtFixedRate(task, 250, nSchdTimer);
        }
     
     public void stopEmulation() {
@@ -156,34 +176,32 @@ public class Ondra extends Thread
         return paused;
     }
 
-    private void genDispTables() {
-
-        for(int n=0;n<10240;n++) {
-            dispAdr[n] = -1;
-        }
-        
+    public void genDispTables() {
+        Arrays.fill(dispAdr, -1);
+        int nSkew = 255 - nRozliseni;
         int adr = 0;
         int vm;
-        for(int y=255;y!=0;y--) {
-            for (int x=0xff00; x!=0xd700; x-=0x0100) {
-                vm = (y >>> 1) | ((y&1) << 7) | x;
+        for (int y = 255 - nSkew; y != 0; y--) {
+            for (int x = 0xff00; x != 0xd700; x -= 0x0100) {
+                vm = (y >>> 1) | ((y & 1) << 7) | x;
                 dispAdr[vm - 0xd800] = adr;
-//                System.out.println(String.format("%04X", vm));
-                //if (dmaEnabled) //not needed as this function is called just from the constructor and in that time dmaEnabled=true
-                px[adr++] = mem.readRam(vm) ;
+                px[adr++] = mem.readRam(vm);
+
             }
+
         }
     }
-    
+
     public void ms20() {        
         if (!paused) {
 
             scr.repaint();
             cpu.setINTLine(true);
             cpu.execute(clk.getTstates()+16);
-            cpu.setINTLine(false);            
+            cpu.setINTLine(false);           
+            if (!paused){
             cpu.execute(clk.getTstates()+t_frame);
-            
+            }            
         }  
     }
             
@@ -242,17 +260,32 @@ public class Ondra extends Thread
     public int peek8(int address) {
         clk.addTstates(3);
         int value = mem.readByte(address) & 0xff;
-//        if (address==0xffff) {
-//        System.out.println(String.format("Peek: %04X,%02X (%04X)", address,value,cpu.getRegPC()));            
-//        }
+  //      if (address==0xFF08) {
+   //       System.out.println(String.format("Peek[%d][%d]: %04X,%02X (%04X)", address >>> 11,address & 2047,address,value,cpu.getRegPC()));            
+   //     }
         return value;
     }
 
     @Override
     public void poke8(int address, int value) {
 //        System.out.println(String.format("Poke: %04X,%02X (%04X)", address,value,cpu.getRegPC()));
-        clk.addTstates(3);
-        mem.writeByte(address, (byte) value);
+        boolean bExe=true;
+       
+        if(utils.Config.bBP6){
+        //memorywrite BP
+         if(utils.Config.nBP6Address==address){
+            stopEmulation();
+            int bpAdd=cpu.getRegPC()-1;
+            cpu.setRegPC(bpAdd);         
+            getDebugger().showDialog();
+            cpu.bMemBP=true; //ukonci provadeni instrukci
+            bExe=false;
+         }
+        }
+        if(bExe){
+         clk.addTstates(3);
+         mem.writeByte(address, (byte) value);
+        }
     }
 
     @Override
@@ -274,6 +307,26 @@ public class Ondra extends Thread
     @Override
     public int inPort(int port) {
         clk.addTstates(4);
+//detekce zmeny rozliseni
+          int nB=cpu.getRegBC()/256;
+          int nC=cpu.getRegBC()%256;
+            if(nB==0x40){
+                int nCarry=nC&128;
+                if(nCarry>0) nCarry=1;
+                nRozliseni=nC<<1;
+                nRozliseni&=255;
+                nRozliseni|=nCarry;
+              //snazim se zapsat rozliseni
+                nRozliseniCnt=0;  
+              //zmena rychlosti Ondry na zaklade rozliseni
+                nSchdTimer=(int)(19*(double)(nRozliseni)/255);
+                if(nSchdTimer<=0) nSchdTimer=1;
+                stopEmulation();
+                genDispTables();
+                if(!dmaEnabled) dmaDisable();
+                startEmulation();                           
+
+            }
 //        System.out.println(String.format("In: %04X (PC=%04X, portA0=%02X, portA1=%02X, portA3=%02X)", port,cpu.getRegPC(), portA0, portA1, portA3));
         return 0xff;
     }
@@ -289,10 +342,12 @@ public class Ondra extends Thread
             if ((portA3&0x01)==0) {
                 t_frame = T_DMAOFF;
                 dmaDisable();
+                scr.repaint();
             }
             else {
                 t_frame = T_DMAON;
                 dmaEnable();
+                scr.repaint();
             }
             if ((portA3&0x02)==0) {
                 mem.mapRom(true);
@@ -306,6 +361,8 @@ public class Ondra extends Thread
             else {
                 mem.mapIO(true);
             }
+
+            
         }
         if ((port & 0x01)==0) {
             portA0 = (byte) value;

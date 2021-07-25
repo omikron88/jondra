@@ -92,6 +92,12 @@ public final class Memory {
     }
 
     public byte readByte(int address) {
+        
+        if(readPages[address >>> PAGE_BIT] == IOVect){
+            //kvuli cteni klavesnice
+           return readPages[address >>> PAGE_BIT][address & 0xFF];  
+        }
+        
         return readPages[address >>> PAGE_BIT][address & PAGE_MASK];
     }
     
@@ -119,6 +125,8 @@ public final class Memory {
             readPages[29] = IOVect;
             readPages[30] = IOVect;
             readPages[31] = IOVect;
+  
+ 
         }
     }
     

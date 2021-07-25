@@ -10,7 +10,11 @@ import java.awt.Toolkit;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.Box;
+import javax.swing.ImageIcon;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import machine.Ondra;
 
@@ -22,12 +26,23 @@ public class JOndra extends javax.swing.JFrame {
     
     private Ondra m;
     private Screen scr;
+    
+    private Debugger deb;
+    private BinOpen bopn;
+    private BinSave bsav;
+    private KeyboardPicture kbrd;
+    private boolean bFirstShow=true;
         
     /**
      * Creates new form JOndra
      */
     public JOndra() {     
         initComponents();
+        setIconImage((new ImageIcon(getClass().getResource("/icons/ondra.png")).getImage()));
+        //presun polozky menu About doprava
+        jMenuBar1.remove(jAbout);
+        jMenuBar1.add(Box.createHorizontalGlue());
+        jMenuBar1.add(jAbout);   
         initEmulator();
     }
 
@@ -42,22 +57,22 @@ public class JOndra extends javax.swing.JFrame {
 
         fc = new javax.swing.JFileChooser();
         ToolBar = new javax.swing.JToolBar();
-        bOpent = new javax.swing.JButton();
+        bReset = new javax.swing.JButton();
+        bPause = new javax.swing.JToggleButton();
+        bNmi = new javax.swing.JButton();
         jSeparator1 = new javax.swing.JToolBar.Separator();
+        bOpent = new javax.swing.JButton();
         bSavet = new javax.swing.JButton();
         jSeparator2 = new javax.swing.JToolBar.Separator();
-        bReset = new javax.swing.JButton();
-        jSeparator3 = new javax.swing.JToolBar.Separator();
-        bNmi = new javax.swing.JButton();
-        jSeparator4 = new javax.swing.JToolBar.Separator();
-        bPause = new javax.swing.JToggleButton();
-        jSeparator5 = new javax.swing.JToolBar.Separator();
-        bSettings = new javax.swing.JButton();
-        jSeparator6 = new javax.swing.JToolBar.Separator();
         bOpens = new javax.swing.JButton();
-        jSeparator7 = new javax.swing.JToolBar.Separator();
         bSaves = new javax.swing.JButton();
+        jSeparator4 = new javax.swing.JToolBar.Separator();
+        jLoadMem = new javax.swing.JButton();
+        jSaveMem = new javax.swing.JButton();
+        jDebbuger = new javax.swing.JButton();
         jSeparator8 = new javax.swing.JToolBar.Separator();
+        bSettings = new javax.swing.JButton();
+        jShowKeyboard = new javax.swing.JButton();
         statusPanel = new javax.swing.JPanel();
         jSeparator31 = new javax.swing.JSeparator();
         GreenLed = new javax.swing.JLabel();
@@ -66,8 +81,27 @@ public class JOndra extends javax.swing.JFrame {
         jSeparator33 = new javax.swing.JSeparator();
         TapeLed = new javax.swing.JLabel();
         jSeparator34 = new javax.swing.JSeparator();
-        bRec = new javax.swing.JToggleButton();
         jSeparator35 = new javax.swing.JSeparator();
+        bRec = new javax.swing.JToggleButton();
+        jMenuBar1 = new javax.swing.JMenuBar();
+        jMenu1 = new javax.swing.JMenu();
+        jTapeLoad = new javax.swing.JMenuItem();
+        jTapeSave = new javax.swing.JMenuItem();
+        jSeparator5 = new javax.swing.JPopupMenu.Separator();
+        jOpenSnapshot = new javax.swing.JMenuItem();
+        jSaveSnapshot = new javax.swing.JMenuItem();
+        jSeparator6 = new javax.swing.JPopupMenu.Separator();
+        jLoadMemoryBlockMenu = new javax.swing.JMenuItem();
+        jSaveMemoryBlockMenu = new javax.swing.JMenuItem();
+        jMenu2 = new javax.swing.JMenu();
+        jReset = new javax.swing.JMenuItem();
+        jPause = new javax.swing.JMenuItem();
+        jNMI = new javax.swing.JMenuItem();
+        jTools = new javax.swing.JMenu();
+        jDebugger = new javax.swing.JMenuItem();
+        jSettings = new javax.swing.JMenuItem();
+        jKeyboardMenu = new javax.swing.JMenuItem();
+        jAbout = new javax.swing.JMenu();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Ondra SPO 186");
@@ -81,11 +115,51 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.setRollover(true);
         ToolBar.setPreferredSize(new java.awt.Dimension(100, 20));
 
+        bReset.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/reset.png"))); // NOI18N
+        bReset.setToolTipText("Reset");
+        bReset.setFocusable(false);
+        bReset.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bReset.setPreferredSize(new java.awt.Dimension(23, 23));
+        bReset.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bResetActionPerformed(evt);
+            }
+        });
+        ToolBar.add(bReset);
+
+        bPause.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/pause.png"))); // NOI18N
+        bPause.setToolTipText("Pause");
+        bPause.setFocusable(false);
+        bPause.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bPause.setOpaque(true);
+        bPause.setPreferredSize(new java.awt.Dimension(23, 23));
+        bPause.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bPause.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jPauseActionPerformed(evt);
+            }
+        });
+        ToolBar.add(bPause);
+
+        bNmi.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/nmi.png"))); // NOI18N
+        bNmi.setToolTipText("NMI");
+        bNmi.setFocusable(false);
+        bNmi.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bNmi.setPreferredSize(new java.awt.Dimension(20, 20));
+        bNmi.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bNmi.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bNmiActionPerformed(evt);
+            }
+        });
+        ToolBar.add(bNmi);
+        ToolBar.add(jSeparator1);
+
         bOpent.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/open.png"))); // NOI18N
         bOpent.setToolTipText("Open tape for Load");
         bOpent.setFocusable(false);
         bOpent.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bOpent.setPreferredSize(new java.awt.Dimension(20, 20));
+        bOpent.setPreferredSize(new java.awt.Dimension(23, 23));
         bOpent.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
         bOpent.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -93,7 +167,6 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bOpent);
-        ToolBar.add(jSeparator1);
 
         bSavet.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/save.png"))); // NOI18N
         bSavet.setToolTipText("Open tape for Save");
@@ -109,48 +182,70 @@ public class JOndra extends javax.swing.JFrame {
         ToolBar.add(bSavet);
         ToolBar.add(jSeparator2);
 
-        bReset.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/reset.png"))); // NOI18N
-        bReset.setToolTipText("Reset");
-        bReset.setFocusable(false);
-        bReset.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bReset.setPreferredSize(new java.awt.Dimension(20, 20));
-        bReset.addActionListener(new java.awt.event.ActionListener() {
+        bOpens.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/opensn.png"))); // NOI18N
+        bOpens.setToolTipText("Open snapshot");
+        bOpens.setFocusable(false);
+        bOpens.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bOpens.setPreferredSize(new java.awt.Dimension(20, 20));
+        bOpens.setRequestFocusEnabled(false);
+        bOpens.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bOpens.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bResetActionPerformed(evt);
+                bOpensActionPerformed(evt);
             }
         });
-        ToolBar.add(bReset);
-        ToolBar.add(jSeparator3);
+        ToolBar.add(bOpens);
 
-        bNmi.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/nmi.png"))); // NOI18N
-        bNmi.setToolTipText("NMI");
-        bNmi.setFocusable(false);
-        bNmi.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bNmi.setPreferredSize(new java.awt.Dimension(20, 20));
-        bNmi.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        bNmi.addActionListener(new java.awt.event.ActionListener() {
+        bSaves.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/savesn.png"))); // NOI18N
+        bSaves.setToolTipText("Save snapshot");
+        bSaves.setFocusable(false);
+        bSaves.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        bSaves.setPreferredSize(new java.awt.Dimension(20, 20));
+        bSaves.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        bSaves.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bNmiActionPerformed(evt);
+                bSavesActionPerformed(evt);
             }
         });
-        ToolBar.add(bNmi);
+        ToolBar.add(bSaves);
         ToolBar.add(jSeparator4);
 
-        bPause.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/pause.png"))); // NOI18N
-        bPause.setSelected(true);
-        bPause.setToolTipText("Run/Pause");
-        bPause.setFocusable(false);
-        bPause.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bPause.setPreferredSize(new java.awt.Dimension(16, 16));
-        bPause.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/run.png"))); // NOI18N
-        bPause.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        bPause.addActionListener(new java.awt.event.ActionListener() {
+        jLoadMem.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/binaryopn.png"))); // NOI18N
+        jLoadMem.setToolTipText("Upload binary file into memory");
+        jLoadMem.setFocusable(false);
+        jLoadMem.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jLoadMem.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jLoadMem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bPauseActionPerformed(evt);
+                jLoadMemActionPerformed(evt);
             }
         });
-        ToolBar.add(bPause);
-        ToolBar.add(jSeparator5);
+        ToolBar.add(jLoadMem);
+
+        jSaveMem.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/binarysav.png"))); // NOI18N
+        jSaveMem.setToolTipText("Save memory into file");
+        jSaveMem.setFocusable(false);
+        jSaveMem.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jSaveMem.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jSaveMem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jSaveMemActionPerformed(evt);
+            }
+        });
+        ToolBar.add(jSaveMem);
+
+        jDebbuger.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/debugger.png"))); // NOI18N
+        jDebbuger.setToolTipText("Start Debbuger");
+        jDebbuger.setFocusable(false);
+        jDebbuger.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jDebbuger.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jDebbuger.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jDebbugerActionPerformed(evt);
+            }
+        });
+        ToolBar.add(jDebbuger);
+        ToolBar.add(jSeparator8);
 
         bSettings.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/settings.png"))); // NOI18N
         bSettings.setToolTipText("Settings");
@@ -164,40 +259,24 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         ToolBar.add(bSettings);
-        ToolBar.add(jSeparator6);
 
-        bOpens.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/osn_open.png"))); // NOI18N
-        bOpens.setToolTipText("Open snapshot");
-        bOpens.setFocusable(false);
-        bOpens.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bOpens.setPreferredSize(new java.awt.Dimension(20, 20));
-        bOpens.setRequestFocusEnabled(false);
-        bOpens.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        bOpens.addActionListener(new java.awt.event.ActionListener() {
+        jShowKeyboard.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/keyico.png"))); // NOI18N
+        jShowKeyboard.setToolTipText("Show Ondra keyboard");
+        jShowKeyboard.setFocusable(false);
+        jShowKeyboard.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jShowKeyboard.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jShowKeyboard.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bOpensActionPerformed(evt);
+                jShowKeyboardActionPerformed(evt);
             }
         });
-        ToolBar.add(bOpens);
-        ToolBar.add(jSeparator7);
-
-        bSaves.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/osn_save.png"))); // NOI18N
-        bSaves.setToolTipText("Save snapshot");
-        bSaves.setFocusable(false);
-        bSaves.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        bSaves.setPreferredSize(new java.awt.Dimension(20, 20));
-        bSaves.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        bSaves.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bSavesActionPerformed(evt);
-            }
-        });
-        ToolBar.add(bSaves);
-        ToolBar.add(jSeparator8);
+        ToolBar.add(jShowKeyboard);
 
         getContentPane().add(ToolBar, java.awt.BorderLayout.PAGE_START);
 
-        statusPanel.setPreferredSize(new java.awt.Dimension(100, 45));
+        statusPanel.setMaximumSize(new java.awt.Dimension(100, 32767));
+        statusPanel.setMinimumSize(new java.awt.Dimension(100, 40));
+        statusPanel.setPreferredSize(new java.awt.Dimension(100, 24));
         statusPanel.setLayout(new javax.swing.BoxLayout(statusPanel, javax.swing.BoxLayout.LINE_AXIS));
 
         jSeparator31.setOrientation(javax.swing.SwingConstants.VERTICAL);
@@ -249,11 +328,21 @@ public class JOndra extends javax.swing.JFrame {
         jSeparator34.setRequestFocusEnabled(false);
         statusPanel.add(jSeparator34);
 
+        jSeparator35.setOrientation(javax.swing.SwingConstants.VERTICAL);
+        jSeparator35.setMaximumSize(new java.awt.Dimension(5, 32767));
+        jSeparator35.setMinimumSize(new java.awt.Dimension(3, 16));
+        jSeparator35.setPreferredSize(new java.awt.Dimension(3, 16));
+        jSeparator35.setRequestFocusEnabled(false);
+        statusPanel.add(jSeparator35);
+
         bRec.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_play.png"))); // NOI18N
         bRec.setToolTipText("Play - Record switch");
         bRec.setBorderPainted(false);
         bRec.setFocusPainted(false);
         bRec.setFocusable(false);
+        bRec.setMaximumSize(new java.awt.Dimension(26, 32));
+        bRec.setMinimumSize(new java.awt.Dimension(24, 24));
+        bRec.setPreferredSize(new java.awt.Dimension(32, 32));
         bRec.setSelectedIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/player_rec.png"))); // NOI18N
         bRec.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -262,14 +351,129 @@ public class JOndra extends javax.swing.JFrame {
         });
         statusPanel.add(bRec);
 
-        jSeparator35.setOrientation(javax.swing.SwingConstants.VERTICAL);
-        jSeparator35.setMaximumSize(new java.awt.Dimension(5, 32767));
-        jSeparator35.setMinimumSize(new java.awt.Dimension(3, 16));
-        jSeparator35.setPreferredSize(new java.awt.Dimension(3, 16));
-        jSeparator35.setRequestFocusEnabled(false);
-        statusPanel.add(jSeparator35);
-
         getContentPane().add(statusPanel, java.awt.BorderLayout.PAGE_END);
+
+        jMenu1.setText("File");
+
+        jTapeLoad.setText("Open TAPE for Load");
+        jTapeLoad.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTapeLoadActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jTapeLoad);
+
+        jTapeSave.setText("Open TAPE for Save");
+        jTapeSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTapeSaveActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jTapeSave);
+        jMenu1.add(jSeparator5);
+
+        jOpenSnapshot.setText("Open snapshot");
+        jOpenSnapshot.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jOpenSnapshotActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jOpenSnapshot);
+
+        jSaveSnapshot.setText("Save snapshot");
+        jSaveSnapshot.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jSaveSnapshotActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jSaveSnapshot);
+        jMenu1.add(jSeparator6);
+
+        jLoadMemoryBlockMenu.setText("Load Memory Block");
+        jLoadMemoryBlockMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jLoadMemoryBlockMenuActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jLoadMemoryBlockMenu);
+
+        jSaveMemoryBlockMenu.setText("Save Memory Block");
+        jSaveMemoryBlockMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jSaveMemoryBlockMenuActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jSaveMemoryBlockMenu);
+
+        jMenuBar1.add(jMenu1);
+
+        jMenu2.setText("Control");
+
+        jReset.setText("Reset");
+        jReset.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jResetActionPerformed(evt);
+            }
+        });
+        jMenu2.add(jReset);
+
+        jPause.setText("Pause");
+        jPause.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jPauseActionPerformed1(evt);
+            }
+        });
+        jMenu2.add(jPause);
+
+        jNMI.setText("NMI");
+        jNMI.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jNMIActionPerformed(evt);
+            }
+        });
+        jMenu2.add(jNMI);
+
+        jMenuBar1.add(jMenu2);
+
+        jTools.setText("Tools");
+
+        jDebugger.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_D, java.awt.event.InputEvent.CTRL_MASK));
+        jDebugger.setText("Debugger");
+        jDebugger.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jDebuggerActionPerformed(evt);
+            }
+        });
+        jTools.add(jDebugger);
+
+        jSettings.setText("Settings");
+        jSettings.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jSettingsActionPerformed(evt);
+            }
+        });
+        jTools.add(jSettings);
+
+        jKeyboardMenu.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0));
+        jKeyboardMenu.setText("Keyboard");
+        jKeyboardMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jKeyboardMenuActionPerformed(evt);
+            }
+        });
+        jTools.add(jKeyboardMenu);
+
+        jMenuBar1.add(jTools);
+
+        jAbout.setText("About");
+        jAbout.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jAboutMousePressed(evt);
+            }
+        });
+        jMenuBar1.add(jAbout);
+
+        setJMenuBar(jMenuBar1);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -304,7 +508,7 @@ public class JOndra extends javax.swing.JFrame {
         fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra wave tapes", "wav"));
         fc.setFileFilter(new FileNameExtensionFilter("Ondra compressed wave tapes", "csw"));
-        fc.setFileFilter(new FileNameExtensionFilter("Ondra binary tapes", "tap"));
+       // fc.setFileFilter(new FileNameExtensionFilter("Ondra binary tapes", "tap"));
         int val = fc.showOpenDialog(this);
         
         if (val==JFileChooser.APPROVE_OPTION) {
@@ -340,18 +544,18 @@ public class JOndra extends javax.swing.JFrame {
         if (!pau) m.startEmulation();
     }//GEN-LAST:event_bSavetActionPerformed
 
-    private void bPauseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bPauseActionPerformed
-        if (bPause.isSelected()) {
+    private void jPauseActionPerformedDo(java.awt.event.ActionEvent evt) {                                       
+        if(m.isPaused()){            
             m.startEmulation();
-        } 
-        else {
+        }else{
+            
             m.stopEmulation();
         }
-    }//GEN-LAST:event_bPauseActionPerformed
-
-    private void bRecActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bRecActionPerformed
-        m.setTapeMode(bRec.isSelected());
-    }//GEN-LAST:event_bRecActionPerformed
+    }
+    
+    private void jPauseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPauseActionPerformed
+       jPauseActionPerformedDo(null);
+    }//GEN-LAST:event_jPauseActionPerformed
 
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         m.closeClenaup();
@@ -399,12 +603,126 @@ public class JOndra extends javax.swing.JFrame {
         if (!pau) m.startEmulation();
     }//GEN-LAST:event_bSavesActionPerformed
 
+    private void jLoadMemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jLoadMemActionPerformed
+        jLoadMemoryBlockActionPerformed(null);
+    }//GEN-LAST:event_jLoadMemActionPerformed
+
+    private void jSaveMemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jSaveMemActionPerformed
+        jSaveMemoryBlockActionPerformed(null);
+    }//GEN-LAST:event_jSaveMemActionPerformed
+
+    private void jDebbugerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jDebbugerActionPerformed
+        jDebuggerStartActionPerformed(null);
+    }//GEN-LAST:event_jDebbugerActionPerformed
+
+    private void jAboutMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jAboutMousePressed
+        JDialog dAbout = new About(new JFrame());     
+        dAbout.setLocationRelativeTo(this);
+        dAbout.setVisible(true);        // TODO add your handling code here:
+    }//GEN-LAST:event_jAboutMousePressed
+
+    private void jDebuggerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jDebuggerActionPerformed
+        jDebuggerStartActionPerformed(null);
+    }//GEN-LAST:event_jDebuggerActionPerformed
+
+    private void jSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jSettingsActionPerformed
+        bSettingsActionPerformed(null);
+    }//GEN-LAST:event_jSettingsActionPerformed
+
+    private void jTapeLoadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTapeLoadActionPerformed
+        bOpentActionPerformed(null);
+    }//GEN-LAST:event_jTapeLoadActionPerformed
+
+    private void jTapeSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTapeSaveActionPerformed
+        bSavetActionPerformed(null);
+    }//GEN-LAST:event_jTapeSaveActionPerformed
+
+    private void jOpenSnapshotActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jOpenSnapshotActionPerformed
+        bOpensActionPerformed(null);
+    }//GEN-LAST:event_jOpenSnapshotActionPerformed
+
+    private void jSaveSnapshotActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jSaveSnapshotActionPerformed
+        bSavesActionPerformed(null);
+    }//GEN-LAST:event_jSaveSnapshotActionPerformed
+
+    private void jLoadMemoryBlockMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jLoadMemoryBlockMenuActionPerformed
+        jLoadMemoryBlockActionPerformed(null);
+    }//GEN-LAST:event_jLoadMemoryBlockMenuActionPerformed
+
+    private void jSaveMemoryBlockMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jSaveMemoryBlockMenuActionPerformed
+        jSaveMemoryBlockActionPerformed(null);
+    }//GEN-LAST:event_jSaveMemoryBlockMenuActionPerformed
+
+    private void jShowKeyboardActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jShowKeyboardActionPerformed
+        if(bFirstShow){
+         kbrd.setLocationRelativeTo(this);
+         bFirstShow=false;
+        }
+        if(kbrd.isVisible()){
+         kbrd.hideDialog();
+        }else{
+         kbrd.showDialog();
+        }
+        kbrd.setAlwaysOnTop(false);        
+    }//GEN-LAST:event_jShowKeyboardActionPerformed
+
+    private void jResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jResetActionPerformed
+        bResetActionPerformed(null);
+    }//GEN-LAST:event_jResetActionPerformed
+
+    private void jPauseActionPerformed1(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPauseActionPerformed1
+       jPauseActionPerformedDo(null);
+    }//GEN-LAST:event_jPauseActionPerformed1
+
+    private void jNMIActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jNMIActionPerformed
+        bNmiActionPerformed(null);
+    }//GEN-LAST:event_jNMIActionPerformed
+
+    private void jKeyboardMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jKeyboardMenuActionPerformed
+        jShowKeyboardActionPerformed(null);
+    }//GEN-LAST:event_jKeyboardMenuActionPerformed
+
+    private void bRecActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bRecActionPerformed
+        m.setTapeMode(bRec.isSelected());
+    }//GEN-LAST:event_bRecActionPerformed
+
+   private void jLoadMemoryBlockActionPerformed(java.awt.event.ActionEvent evt) {                                                 
+        boolean pau = m.isPaused();
+        
+        m.stopEmulation();
+        bopn.setLocationRelativeTo(this);
+        bopn.showDialog();
+        bopn.setAlwaysOnTop(true); 
+    }                                                
+
+    private void jSaveMemoryBlockActionPerformed(java.awt.event.ActionEvent evt) {                                                 
+       boolean pau = m.isPaused();
+        
+       m.stopEmulation();
+        bsav.setLocationRelativeTo(this);
+        bsav.showDialog(); 
+        bsav.setAlwaysOnTop(true); 
+    }                                                
+
+    private void jDebuggerStartActionPerformed(java.awt.event.ActionEvent evt) {                                          
+        boolean pau = m.isPaused();
+        
+        m.stopEmulation();
+        deb.showDialog(); 
+        deb.setAlwaysOnTop(true);
+    }
     private void initEmulator() {
         m = new Ondra();
         scr = new Screen();
         
         m.setScreen(scr);
         scr.setImage(m.getImage());
+        
+        deb=new Debugger(m);        
+        bopn=new BinOpen(m);
+        bsav=new BinSave(m);
+        kbrd=new KeyboardPicture();
+        m.setDebugger(deb);  
         
         m.setGreenLed(GreenLed);
         m.setYellowLed(YellowLed);        
@@ -478,19 +796,38 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JButton bSavet;
     private javax.swing.JButton bSettings;
     private javax.swing.JFileChooser fc;
+    private javax.swing.JMenu jAbout;
+    private javax.swing.JButton jDebbuger;
+    private javax.swing.JMenuItem jDebugger;
+    private javax.swing.JMenuItem jKeyboardMenu;
+    private javax.swing.JButton jLoadMem;
+    private javax.swing.JMenuItem jLoadMemoryBlockMenu;
+    private javax.swing.JMenu jMenu1;
+    private javax.swing.JMenu jMenu2;
+    private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenuItem jNMI;
+    private javax.swing.JMenuItem jOpenSnapshot;
+    private javax.swing.JMenuItem jPause;
+    private javax.swing.JMenuItem jReset;
+    private javax.swing.JButton jSaveMem;
+    private javax.swing.JMenuItem jSaveMemoryBlockMenu;
+    private javax.swing.JMenuItem jSaveSnapshot;
     private javax.swing.JToolBar.Separator jSeparator1;
     private javax.swing.JToolBar.Separator jSeparator2;
-    private javax.swing.JToolBar.Separator jSeparator3;
     private javax.swing.JSeparator jSeparator31;
     private javax.swing.JSeparator jSeparator32;
     private javax.swing.JSeparator jSeparator33;
     private javax.swing.JSeparator jSeparator34;
     private javax.swing.JSeparator jSeparator35;
     private javax.swing.JToolBar.Separator jSeparator4;
-    private javax.swing.JToolBar.Separator jSeparator5;
-    private javax.swing.JToolBar.Separator jSeparator6;
-    private javax.swing.JToolBar.Separator jSeparator7;
+    private javax.swing.JPopupMenu.Separator jSeparator5;
+    private javax.swing.JPopupMenu.Separator jSeparator6;
     private javax.swing.JToolBar.Separator jSeparator8;
+    private javax.swing.JMenuItem jSettings;
+    private javax.swing.JButton jShowKeyboard;
+    private javax.swing.JMenuItem jTapeLoad;
+    private javax.swing.JMenuItem jTapeSave;
+    private javax.swing.JMenu jTools;
     private javax.swing.JPanel statusPanel;
     // End of variables declaration//GEN-END:variables
 

@@ -128,14 +128,16 @@
  */
 package z80core;
 
+import gui.Debugger;
 import java.util.Arrays;
 import machine.Clock;
+import machine.Ondra;
 
 public class Z80 {
-
-    private final Clock clock;
+    public final Clock clock;
     private final MemIoOps MemIoImpl;
     private final NotifyOps NotifyImpl;
+    public boolean bMemBP=false;
     // Código de instrucción a ejecutar
     private int opCode;
     // Subsistema de notificaciones
@@ -1679,20 +1681,13 @@ public class Z80 {
         Arrays.fill(breakpointAt, false);
     }
     
-
-    /* Los tEstados transcurridos se calculan teniendo en cuenta el número de
-     * ciclos de máquina reales que se ejecutan. Esa es la única forma de poder
-     * simular la contended memory del Spectrum.
-     */
-    public final void execute(long statesLimit) {
-
-        while (clock.getTstates() < statesLimit) {
+    public final void executeOne() {
 
             // Primero se comprueba NMI
             if (activeNMI) {
                 activeNMI = false;
                 nmi();
-                continue;
+                return;
             }
 
             // Ahora se comprueba si al final de la instrucción anterior se
@@ -1713,6 +1708,57 @@ public class Z80 {
 
             decodeOpcode(opCode);
 
+            // Si está pendiente la activación de la interrupciones y el
+            // código que se acaba de ejecutar no es el propio EI
+            if (pendingEI && opCode != 0xFB) {
+                pendingEI = false;
+            }
+
+            if (execDone) {
+                NotifyImpl.execDone();
+            }
+    }
+
+    /* Los tEstados transcurridos se calculan teniendo en cuenta el número de
+     * ciclos de máquina reales que se ejecutan. Esa es la única forma de poder
+     * simular la contended memory del Spectrum.
+     */
+    public final void execute(long statesLimit) {
+        bMemBP=false;
+        while (clock.getTstates() < statesLimit) {
+
+            // Primero se comprueba NMI
+            if (activeNMI) {
+                activeNMI = false;
+                nmi();
+                continue;
+            }
+
+            // Ahora se comprueba si al final de la instrucción anterior se
+            // encontró una interrupción enmascarable y, de ser así, se procesa.
+            if (activeINT) {
+                if (ffIFF1 && !pendingEI) {
+                    interruption();
+                }
+            }
+
+            regR++;
+            opCode = MemIoImpl.fetchOpcode(regPC);
+            
+            if (breakpointAt[regPC]) {
+                opCode = NotifyImpl.atAddress(regPC, opCode);
+                Ondra m = (Ondra) NotifyImpl;
+                m.stopEmulation();
+
+                m.getDebugger().showDialog();
+                break;
+            }
+            
+            regPC = (regPC + 1) & 0xffff;
+
+            decodeOpcode(opCode);
+//pokud se objevil memory breakpoint tak vyskoc
+            if(bMemBP) break;
             // Si está pendiente la activación de la interrupciones y el
             // código que se acaba de ejecutar no es el propio EI
             if (pendingEI && opCode != 0xFB) {
