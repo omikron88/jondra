@@ -1636,6 +1636,7 @@ public class Z80 {
         clock.addTstates(7);
 
         regR++;
+      
         ffIFF1 = ffIFF2 = false;
         push(regPC);  // el push ańadirá 6 t-estados (+contended si toca)
         if (modeINT == IntMode.IM2) {

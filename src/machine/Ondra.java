@@ -24,9 +24,9 @@ import z80core.Z80State;
  */
 public class Ondra extends Thread 
  implements z80core.MemIoOps, z80core.NotifyOps {
-    
-    private final int T_DMAOFF = 40000;
-    private final int T_DMAON  = 10000;
+    //correction - 2601-2728
+    private final int T_DMAOFF = 40000-2665;
+    private final int T_DMAON  = 10000-2665;
     
     private final int OSN_VERSION = 0x01; //version 0.1
     
@@ -53,16 +53,17 @@ public class Ondra extends Thread
     public  byte portA0, portA1, portA3;
     private byte iov[];
    
-    private int t_frame = T_DMAOFF;
+    private int t_resolution_correct  = 0;
+    private int t_frame = T_DMAOFF+t_resolution_correct;    
+    private int nDMAStatus = 0;
     
     private boolean tapestart;
     
     private Debugger deb;
     
-    private int nRozliseniCnt=0;
     public int nRozliseni=255;
     boolean bFrst=false;
-    int nSchdTimer=20;
+
     
     public Ondra() {
         img = new BufferedImage(320, 256, BufferedImage.TYPE_BYTE_BINARY);
@@ -135,14 +136,15 @@ public class Ondra extends Thread
 
     public final void Reset(boolean dirty) {
         portA3 = portA0 = 0;
-        t_frame = T_DMAOFF;
+        nDMAStatus = 0;
+        t_resolution_correct=0;
+        t_frame = T_DMAOFF+t_resolution_correct;
         mem.Reset(dirty);
         mem.mapRom(true);
         clk.reset();
         cpu.reset();
         key.Reset();
         nRozliseni=255;
-        nRozliseniCnt=0;
         genDispTables();
         tapestart = false;
         if (RecButton!=null) { tap.tapeStop(); }
@@ -160,8 +162,8 @@ public class Ondra extends Thread
         
         scr.repaint();
         paused = false;
-        task = new MTimer(this);
-        tim.scheduleAtFixedRate(task, 250, nSchdTimer);
+        task = new MTimer(this);        
+        tim.scheduleAtFixedRate(task, 250, 20);      
        }
     
     public void stopEmulation() {
@@ -170,7 +172,8 @@ public class Ondra extends Thread
         
         paused = true;
         task.cancel();
-    }
+    } 
+    
     
     public boolean isPaused() {
         return paused;
@@ -316,16 +319,14 @@ public class Ondra extends Thread
                 nRozliseni=nC<<1;
                 nRozliseni&=255;
                 nRozliseni|=nCarry;
-              //snazim se zapsat rozliseni
-                nRozliseniCnt=0;  
               //zmena rychlosti Ondry na zaklade rozliseni
-                nSchdTimer=(int)(19*(double)(nRozliseni)/255);
-                if(nSchdTimer<=0) nSchdTimer=1;
-                stopEmulation();
+                t_resolution_correct=(255-nRozliseni)*128;
+                if(nDMAStatus==0){
+                   t_frame=T_DMAOFF+t_resolution_correct; 
+                }else{
+                   t_frame=T_DMAON+t_resolution_correct;
+                }
                 genDispTables();
-                if(!dmaEnabled) dmaDisable();
-                startEmulation();                           
-
             }
 //        System.out.println(String.format("In: %04X (PC=%04X, portA0=%02X, portA1=%02X, portA3=%02X)", port,cpu.getRegPC(), portA0, portA1, portA3));
         return 0xff;
@@ -340,12 +341,14 @@ public class Ondra extends Thread
         if ((port & 0x08)==0) {
             portA3 = (byte) value;
             if ((portA3&0x01)==0) {
-                t_frame = T_DMAOFF;
+                t_frame = T_DMAOFF+t_resolution_correct;
+                nDMAStatus = 0;
                 dmaDisable();
                 scr.repaint();
             }
             else {
-                t_frame = T_DMAON;
+                t_frame = T_DMAON+t_resolution_correct;                
+                nDMAStatus = 1;
                 dmaEnable();
                 scr.repaint();
             }

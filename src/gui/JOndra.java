@@ -659,11 +659,14 @@ public class JOndra extends javax.swing.JFrame {
          bFirstShow=false;
         }
         if(kbrd.isVisible()){
+         m.getKeyboard().removeKeyboardPicture();
          kbrd.hideDialog();
         }else{
          kbrd.showDialog();
-        }
-        kbrd.setAlwaysOnTop(false);        
+         kbrd.setAlwaysOnTop(true);
+         m.getKeyboard().setKeyboardPicture(kbrd);
+         this.requestFocus();
+        }               
     }//GEN-LAST:event_jShowKeyboardActionPerformed
 
     private void jResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jResetActionPerformed
@@ -721,7 +724,7 @@ public class JOndra extends javax.swing.JFrame {
         deb=new Debugger(m);        
         bopn=new BinOpen(m);
         bsav=new BinSave(m);
-        kbrd=new KeyboardPicture();
+        kbrd=new KeyboardPicture(this);
         m.setDebugger(deb);  
         
         m.setGreenLed(GreenLed);
@@ -737,6 +740,10 @@ public class JOndra extends javax.swing.JFrame {
         setFocusTraversalKeysEnabled(false);
         addKeyListener(m.getKeyboard());
         m.start();
+    }
+    
+    public Ondra getOndra(){
+        return m;
     }
 
     /**

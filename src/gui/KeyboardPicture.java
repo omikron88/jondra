@@ -6,20 +6,66 @@
 package gui;
 
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
+import java.lang.reflect.Field;
 import javax.swing.ImageIcon;
 
 /**
  *
- * @author admin
+ * @author tmilata
  */
 public class KeyboardPicture extends javax.swing.JFrame {
+
+    JOndra parent=null;
+    boolean bCSkeySet=false;
 
     /**
      * Creates new form KeyboardPicture
      */
-    public KeyboardPicture() {
-        initComponents();
+    public KeyboardPicture(final JOndra parent) {
+        this.parent=parent; 
+        initComponents();         
+        
+        setLayout(null);
+        pictMainKeyboard.setLocation(0,0);
+        picSym.setLocation(2,88+1);
+        picShift.setLocation(0,131+1);
+        picCS.setLocation(57,131+1);
+        picNum.setLocation(112,130+1);
+        picCtrl.setLocation(516,90+1);
+        getContentPane().setComponentZOrder(pictMainKeyboard, 1);
+        getContentPane().setComponentZOrder(picSym, 0);
+        getContentPane().setComponentZOrder(picShift, 0);
+        getContentPane().setComponentZOrder(picCS, 0);
+        getContentPane().setComponentZOrder(picNum, 0);
+        getContentPane().setComponentZOrder(picCtrl, 0);
+        hideAllPressedKeys();
         setIconImage((new ImageIcon(getClass().getResource("/icons/keyico.png")).getImage()));
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                parent.getOndra().getKeyboard().removeKeyboardPicture();
+            }
+        });
+        
+        addWindowFocusListener(new WindowFocusListener(){
+            public void windowLostFocus(WindowEvent arg0) {
+            }
+            public void windowGainedFocus(WindowEvent e) {
+                parent.requestFocus();
+            }
+        });
+    }
+    
+    public void hideAllPressedKeys(){
+        picSym.setVisible(false);
+        picShift.setVisible(false);
+        picCS.setVisible(false);
+        picNum.setVisible(false);
+        picCtrl.setVisible(false);
+        bCSkeySet=false;
     }
 
     /**
@@ -31,47 +77,90 @@ public class KeyboardPicture extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jLabel1 = new javax.swing.JLabel();
+        pictMainKeyboard = new javax.swing.JLabel();
+        picSym = new javax.swing.JLabel();
+        picShift = new javax.swing.JLabel();
+        picCS = new javax.swing.JLabel();
+        picNum = new javax.swing.JLabel();
+        picCtrl = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Keyboard");
-        addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                formKeyTyped(evt);
-            }
-        });
+        setResizable(false);
+        getContentPane().setLayout(new javax.swing.OverlayLayout(getContentPane()));
 
-        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/keyboard.png"))); // NOI18N
+        pictMainKeyboard.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/keyboard.png"))); // NOI18N
+        getContentPane().add(pictMainKeyboard);
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 610, javax.swing.GroupLayout.PREFERRED_SIZE))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
+        picSym.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/KBD_symbPress.png"))); // NOI18N
+        getContentPane().add(picSym);
+
+        picShift.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/KBD_shiftPress.png"))); // NOI18N
+        getContentPane().add(picShift);
+
+        picCS.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/KBD_csPress.png"))); // NOI18N
+        getContentPane().add(picCS);
+
+        picNum.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/KBD_numPress.png"))); // NOI18N
+        getContentPane().add(picNum);
+
+        picCtrl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/KBD_ctrlPress.png"))); // NOI18N
+        getContentPane().add(picCtrl);
+
+        getAccessibleContext().setAccessibleParent(this);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    private void formKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_formKeyTyped
-        char keyChar = Character.toUpperCase(evt.getKeyChar());
-        if ( keyChar == KeyEvent.VK_ESCAPE) {
-            hideDialog();
+   
+    public void ProcessKeyPress(KeyEvent ke) {
+        switch (ke.getKeyCode()) {
+            case KeyEvent.VK_TAB:
+                picNum.setVisible(true);
+                return;
+            case KeyEvent.VK_SHIFT:
+                picShift.setVisible(true);
+                return;
+            case KeyEvent.VK_EQUALS:
+            case KeyEvent.VK_DEAD_ACUTE:
+                if (bCSkeySet) {
+                    picCS.setVisible(false);
+                    bCSkeySet=false;
+                } else {
+                    picCS.setVisible(true);
+                    bCSkeySet=true;
+                }
+                return;
+            case KeyEvent.VK_CONTROL:
+                picCtrl.setVisible(true);
+                return;
+            case KeyEvent.VK_ALT:
+                picSym.setVisible(true);
+                return;
         }
-    }//GEN-LAST:event_formKeyTyped
-
+         picCS.setVisible(false);
+         bCSkeySet=false;
+    }
+     
+     public void ProcessKeyRelease(KeyEvent ke) {
+      switch(ke.getKeyCode()) {
+         case KeyEvent.VK_TAB:
+                picNum.setVisible(false);
+                break;
+         case KeyEvent.VK_SHIFT:
+                picShift.setVisible(false);
+                break;   
+         case KeyEvent.VK_CONTROL:
+                picCtrl.setVisible(false);
+                break;
+         case KeyEvent.VK_ALT:
+                picSym.setVisible(false);
+                break;                
+      }
+     }
     
        public void showDialog() {        
         setVisible(true);
+        hideAllPressedKeys();
        }
        
        public void hideDialog() {        
@@ -79,6 +168,11 @@ public class KeyboardPicture extends javax.swing.JFrame {
        }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel picCS;
+    private javax.swing.JLabel picCtrl;
+    private javax.swing.JLabel picNum;
+    private javax.swing.JLabel picShift;
+    private javax.swing.JLabel picSym;
+    private javax.swing.JLabel pictMainKeyboard;
     // End of variables declaration//GEN-END:variables
 }
