@@ -7,6 +7,7 @@ package machine;
 import java.io.File;
 import java.io.IOException;
 import utils.CswFile;
+import utils.TapFile;
 import utils.TapeSignalProc;
 import utils.WavFile;
 
@@ -23,9 +24,10 @@ public class Tape implements ClockTimeoutListener {
     private File LoadTape, SaveTape;
     private CswFile lcsw, scsw;
     private WavFile lwav;
+    private TapFile ltap;    
     private int lrate, srate;
 
-    private enum st {CLOSE, CSW, WAV};
+    private enum st {CLOSE, CSW, WAV, TAP};
     private st lst, sst;
     private boolean record;
     
@@ -33,7 +35,7 @@ public class Tape implements ClockTimeoutListener {
         m = machine;
         tsp = new TapeSignalProc(256);
         lst = sst = st.CLOSE;
-        record = false;
+        record = false;           
     }
 
     public void openLoadTape(String canonicalPath) {
@@ -46,12 +48,19 @@ public class Tape implements ClockTimeoutListener {
             } catch (IOException ex) {
                 lst = st.CLOSE;
                 try {
-                    lwav = WavFile.openWavFile(LoadTape);
-                    lrate = (int) (2e6 / lwav.getSampleRate());
-                    lst = st.WAV;
-                } catch (Exception ex1) {
-                    lst = st.CLOSE;
-                }
+                    ltap = TapFile.openTapFile(LoadTape);   
+                    lrate=4;
+                    lst = st.TAP;                   
+                 } catch (IOException ex2) {
+                   lst = st.CLOSE;                
+                   try {
+                     lwav = WavFile.openWavFile(LoadTape);
+                     lrate = (int) (2e6 / lwav.getSampleRate());
+                     lst = st.WAV;
+                   } catch (Exception ex1) {
+                     lst = st.CLOSE;
+                   }
+                 }
             }
         }
     }
@@ -76,6 +85,12 @@ public class Tape implements ClockTimeoutListener {
     }
 
     public void tapeStart() {
+        if(lst==st.TAP){
+        //urychlim nahravani TAPu, zrychlenim Ondry 10x
+         m.stopEmulation();
+         m.setClockSpeed(2);
+         m.startEmulation();
+        }
         m.TapeLed.setEnabled(true);
         m.RecButton.setEnabled(false);
         m.clk.addClockTimeoutListener(this);
@@ -111,13 +126,32 @@ public class Tape implements ClockTimeoutListener {
                     break;
                 }
                 
+                case TAP: {                    
+                    if (ltap.bFinished) {
+                        //jsem na konci, vypnu urychleni nahravani TAPu zpomalenim Ondry
+                       if(m.getClockSpeed()!=20){
+                        m.stopEmulation();
+                        lst=st.CLOSE;
+                        m.TapeLed.setEnabled(false);
+                        m.RecButton.setEnabled(true);
+                        m.setClockSpeed(20);
+                        m.startEmulation(); 
+                       }
+                    } else {
+                        m.clk.setTimeout(lrate);
+                        m.mem.setTapeIn(ltap.generateFrame());
+                    }                                                    
+                    break;
+                }
+                
                 case WAV: {
                     m.clk.setTimeout(lrate);
                     try {
                         lwav.readFrames(tbuff, 1);
                     } catch (Exception ex) {
-                    }
+                    } 
                     m.mem.setTapeIn(tsp.addSample(tbuff[0]));
+
                     break;
                 }
                 
@@ -134,6 +168,6 @@ public class Tape implements ClockTimeoutListener {
                 scsw.close();
             } catch (IOException ex) {
             }
-        }
+        }        
     }
 }

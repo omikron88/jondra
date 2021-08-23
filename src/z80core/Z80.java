@@ -1745,7 +1745,7 @@ public class Z80 {
 
             regR++;
             opCode = MemIoImpl.fetchOpcode(regPC);
-            
+
             if (breakpointAt[regPC]) {
                 opCode = NotifyImpl.atAddress(regPC, opCode);
                 Ondra m = (Ondra) NotifyImpl;
@@ -1754,7 +1754,7 @@ public class Z80 {
                 m.getDebugger().showDialog();
                 break;
             }
-            
+        
             regPC = (regPC + 1) & 0xffff;
 
             decodeOpcode(opCode);

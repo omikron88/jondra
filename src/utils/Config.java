@@ -46,8 +46,11 @@ public class Config {
     public static String strSaveBinFilePath="";
     public static int nSaveFromAddress=0;
     public static int nSaveToAddress=0;
-    
-    
+  
+    public static String strTapFilePath = "";
+    public static String strSnapFilePath = "";
+    public static String strShotFilePath = "";
+
     public static String getMyPath() {
         String retVal = "";
         retVal = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
@@ -85,6 +88,10 @@ public class Config {
      prop.setProperty("BINSAVEADDRESSFROM", String.valueOf(nSaveFromAddress)); 
      prop.setProperty("BINSAVEADDRESSTO", String.valueOf(nSaveToAddress)); 
      
+     prop.setProperty("TAPFILEPATH", strTapFilePath);
+     prop.setProperty("SNAFILEPATH",strSnapFilePath);
+     prop.setProperty("SHOTFILEPATH",strShotFilePath);
+     
 
       String fileName = getMyPath() + "JOndra.config";
         OutputStream os;
@@ -120,6 +127,14 @@ public class Config {
         }
         return bRet;
     }
+    
+    private static String nullToEmpty(String strIn) {
+        if (strIn == null) {
+            strIn = "";
+        }
+        return strIn;
+    }
+
 
     public static void LoadConfig() {
         Properties prop = new Properties();
@@ -137,7 +152,7 @@ public class Config {
                 return;
         }
 
-        strBinFilePath = prop.getProperty("BINFILEPATH");
+        strBinFilePath = nullToEmpty(prop.getProperty("BINFILEPATH"));
         nBeginBinAddress=parseIntSafe(prop.getProperty("BEGINBINADDRESS"),0);
         bRunBin=parseBooleanSafe(prop.getProperty("BRUNBIN"),false);
         nRunBinAddress=parseIntSafe(prop.getProperty("RUNBINADDRESS"),0); 
@@ -157,7 +172,10 @@ public class Config {
         nBP6Address=parseIntSafe(prop.getProperty("BP6ADDRESS"),0);
         nMemAddress=parseIntSafe(prop.getProperty("MEMADDRESS"),0);
         bShowCode=parseBooleanSafe(prop.getProperty("BSHOWCODE"),false);
-        strSaveBinFilePath = prop.getProperty("BINSAVEFILEPATH");
+        strSaveBinFilePath = nullToEmpty(prop.getProperty("BINSAVEFILEPATH"));
+        strTapFilePath = nullToEmpty(prop.getProperty("TAPFILEPATH"));
+        strSnapFilePath = nullToEmpty(prop.getProperty("SNAFILEPATH"));
+        strShotFilePath = nullToEmpty(prop.getProperty("SHOTFILEPATH"));
         nSaveFromAddress=parseIntSafe(prop.getProperty("BINSAVEADDRESSFROM"),0);
         nSaveToAddress=parseIntSafe(prop.getProperty("BINSAVEADDRESSTO"),0);
         

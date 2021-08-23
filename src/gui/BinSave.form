@@ -89,6 +89,9 @@
       </Properties>
     </Component>
     <Component class="javax.swing.JTextField" name="jTextBinFile">
+      <Events>
+        <EventHandler event="focusLost" listener="java.awt.event.FocusListener" parameters="java.awt.event.FocusEvent" handler="jTextBinFileFocusLost"/>
+      </Events>
     </Component>
     <Component class="utils.JNumberTextField" name="jNumberTextSavAdrTo">
       <Properties>

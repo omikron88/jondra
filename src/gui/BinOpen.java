@@ -90,6 +90,12 @@ public class BinOpen extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Upload file into memory");
 
+        jTextBinFile.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                jTextBinFileFocusLost(evt);
+            }
+        });
+
         jLabel1.setText("File");
 
         jButtonBinOpen.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/opnfldr.png"))); // NOI18N
@@ -311,6 +317,8 @@ public class BinOpen extends javax.swing.JFrame {
             }
         } catch (Exception e) {
         }
+        //nastavim Ondru na spravnou rychlost
+        m.setClockSpeed(20);
         m.startEmulation();
         dispose();
     }//GEN-LAST:event_jButtonOKActionPerformed
@@ -333,6 +341,14 @@ public class BinOpen extends javax.swing.JFrame {
        EnableHeaderOn();
        Config.SaveConfig();
     }//GEN-LAST:event_jHeaderOnActionPerformed
+
+    private void jTextBinFileFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBinFileFocusLost
+                                     
+        Config.strBinFilePath = jTextBinFile.getText();
+        Config.SaveConfig();
+        refreshDlg();
+
+    }//GEN-LAST:event_jTextBinFileFocusLost
 
    
     // Variables declaration - do not modify//GEN-BEGIN:variables

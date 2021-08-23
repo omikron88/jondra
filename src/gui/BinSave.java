@@ -87,6 +87,12 @@ public class BinSave extends javax.swing.JFrame {
 
         jLabel1.setText("File");
 
+        jTextBinFile.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                jTextBinFileFocusLost(evt);
+            }
+        });
+
         jNumberTextSavAdrTo.setText("0000");
         jNumberTextSavAdrTo.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusLost(java.awt.event.FocusEvent evt) {
@@ -217,12 +223,19 @@ public class BinSave extends javax.swing.JFrame {
                 }
 
             } catch (FileNotFoundException ex) {
-                JOptionPane.showMessageDialog(null, "Can't create file: " + Config.strSaveBinFilePath);
+               // JOptionPane.showMessageDialog(null, "Can't create file: " + Config.strSaveBinFilePath);
             }
         }
         m.startEmulation();
         dispose();
     }//GEN-LAST:event_jButtonOKActionPerformed
+
+    private void jTextBinFileFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBinFileFocusLost
+        Config.strSaveBinFilePath = jTextBinFile.getText();
+        //jTextBinFile.setText(fc.getSelectedFile().getCanonicalPath());
+        Config.SaveConfig();
+        refreshDlg();
+    }//GEN-LAST:event_jTextBinFileFocusLost
 
    
     // Variables declaration - do not modify//GEN-BEGIN:variables
