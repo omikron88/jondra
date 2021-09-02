@@ -17,7 +17,18 @@ Load
 ----
 .wav audio file, must be mono and 8bit samples.
 .csw Ramsoft's Compressed Square wave - much smaller than audio files
+.tap binary tape file for ViLi rom
+.bin binary file used by Ondra SD
 
 Save
 ----
 .csw Ramsoft's Compressed Square wave - see format description in doc directory
+.bin binary file - copy of memory block
+
+Debugger
+--------
+- 6 breakpoints (2 types)
+- memory editing in HEX mode
+- T-states count (resetable by double click)
+
+
