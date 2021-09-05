@@ -42,6 +42,7 @@ public class Config {
     public static int nBP6Address=0;
     public static int nMemAddress=0;
     public static boolean bShowCode=false;
+    public static boolean bAudio=true;
     //ulozene udaje pro ukladani do binarniho souboru
     public static String strSaveBinFilePath="";
     public static int nSaveFromAddress=0;
@@ -83,6 +84,7 @@ public class Config {
      prop.setProperty("BP6ADDRESS", String.valueOf(nBP6Address));  
      prop.setProperty("MEMADDRESS", String.valueOf(nMemAddress)); 
      prop.setProperty("BSHOWCODE", String.valueOf(bShowCode)); 
+     prop.setProperty("AUDIO", String.valueOf(bAudio)); 
      
      prop.setProperty("BINSAVEFILEPATH", String.valueOf(strSaveBinFilePath));
      prop.setProperty("BINSAVEADDRESSFROM", String.valueOf(nSaveFromAddress)); 
@@ -128,7 +130,7 @@ public class Config {
         return bRet;
     }
     
-    private static String nullToEmpty(String strIn) {
+    public static String nullToEmpty(String strIn) {
         if (strIn == null) {
             strIn = "";
         }
@@ -172,6 +174,7 @@ public class Config {
         nBP6Address=parseIntSafe(prop.getProperty("BP6ADDRESS"),0);
         nMemAddress=parseIntSafe(prop.getProperty("MEMADDRESS"),0);
         bShowCode=parseBooleanSafe(prop.getProperty("BSHOWCODE"),false);
+        bAudio=parseBooleanSafe(prop.getProperty("AUDIO"),true);
         strSaveBinFilePath = nullToEmpty(prop.getProperty("BINSAVEFILEPATH"));
         strTapFilePath = nullToEmpty(prop.getProperty("TAPFILEPATH"));
         strSnapFilePath = nullToEmpty(prop.getProperty("SNAFILEPATH"));
@@ -179,7 +182,5 @@ public class Config {
         nSaveFromAddress=parseIntSafe(prop.getProperty("BINSAVEADDRESSFROM"),0);
         nSaveToAddress=parseIntSafe(prop.getProperty("BINSAVEADDRESSTO"),0);
         
-      
-  
     }
 }

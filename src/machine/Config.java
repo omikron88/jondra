@@ -27,7 +27,17 @@ public class Config {
     private String RomA = "";
     private String RomB = "";
     
+    private boolean bAudio=true;
     
+     public boolean getAudio() {
+        return bAudio;
+    }
+    
+    public void setAudio(boolean bInAudio) {
+        bAudio=bInAudio;
+    }
+
+            
     public void setRomType(byte b) {
         if (b!=Rom) {
             Rom = b;

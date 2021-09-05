@@ -128,7 +128,6 @@
  */
 package z80core;
 
-import gui.Debugger;
 import java.util.Arrays;
 import machine.Clock;
 import machine.Ondra;

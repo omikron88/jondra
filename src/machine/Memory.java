@@ -102,7 +102,7 @@ public final class Memory {
     }
     
     public void writeByte(int address, byte value) {
-        writePages[address >>> PAGE_BIT][address & PAGE_MASK] = value;
+        writePages[address >>> PAGE_BIT][address & PAGE_MASK] = value;         
         if (address>=0xd800) {
             m.processVram(address, value);
         }

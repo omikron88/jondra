@@ -10,10 +10,10 @@ import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import javax.swing.Box;
 import javax.swing.ImageIcon;
@@ -37,8 +37,11 @@ public class JOndra extends javax.swing.JFrame {
     private BinOpen bopn;
     private BinSave bsav;
     private KeyboardPicture kbrd;
-    private boolean bFirstShow=true;
-        
+    private boolean bFirstShowKbd=true;
+    //snazim se nabidnout co nejvhodnejsi filename pro sceenshot a snapshot
+    //je vyplneno pri otevreni nejakeho osuboru tap, wav, csw nebo bin
+    private String strSnapshotNameProposal=""; 
+    private String strSceenshotNameProposal=""; 
     /**
      * Creates new form JOndra
      */
@@ -380,6 +383,7 @@ public class JOndra extends javax.swing.JFrame {
         jMenu1.add(jTapeSave);
         jMenu1.add(jSeparator5);
 
+        jOpenSnapshot.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F8, 0));
         jOpenSnapshot.setText("Open snapshot");
         jOpenSnapshot.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -388,6 +392,7 @@ public class JOndra extends javax.swing.JFrame {
         });
         jMenu1.add(jOpenSnapshot);
 
+        jSaveSnapshot.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F5, 0));
         jSaveSnapshot.setText("Save snapshot");
         jSaveSnapshot.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -501,6 +506,7 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
         m.setClockSpeed(20);
         m.startEmulation();
+        setProposalName("");
         m.Reset(false);
     }//GEN-LAST:event_bResetActionPerformed
 
@@ -510,8 +516,7 @@ public class JOndra extends javax.swing.JFrame {
 
     private void bSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bSettingsActionPerformed
         boolean pau = m.isPaused();
-        m.stopEmulation();
-        
+        m.stopEmulation();        
         Settings set = new Settings();
         set.showDialog(m.getConfig());
         if (set.isResetNeeded()) {
@@ -526,8 +531,9 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open tape for LOAD");
-        Config.LoadConfig();        
-        fc.setCurrentDirectory(new File(Config.strTapFilePath));
+        Config.LoadConfig();
+        fc.setSelectedFile(new File(""));        
+        fc.setCurrentDirectory(new File(Config.nullToEmpty(new File(Config.strTapFilePath).getParent())));
         fc.resetChoosableFileFilters();
         fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra wave tapes", "wav"));
@@ -537,10 +543,12 @@ public class JOndra extends javax.swing.JFrame {
         
         if (val==JFileChooser.APPROVE_OPTION) {
             try {
-                m.openLoadTape(fc.getSelectedFile().getCanonicalPath());
+                String strFileName=fc.getSelectedFile().getCanonicalPath();
+                m.openLoadTape(strFileName);
+                setProposalName(getFilenameOnly(strFileName));
                 //kdyby nekdo vybiral behem zrychleneho nahravani, tak timto se vrati rychlost na spravnou hodnotu
                 m.setClockSpeed(20);        
-                Config.strTapFilePath=fc.getSelectedFile().getCanonicalPath();                
+                Config.strTapFilePath=strFileName;                
                 Config.SaveConfig();
             } catch (IOException ex) {
                 Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
@@ -555,8 +563,8 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Open tape for SAVE");
-        Config.LoadConfig();        
-        fc.setCurrentDirectory(new File(Config.strTapFilePath));
+        Config.LoadConfig();             
+        fc.setCurrentDirectory(new File(Config.nullToEmpty(new File(Config.strTapFilePath).getParent())));        
         fc.setSelectedFile(new File(""));
         fc.resetChoosableFileFilters();
         fc.setAcceptAllFileFilterUsed(true);
@@ -600,7 +608,8 @@ public class JOndra extends javax.swing.JFrame {
 
         fc.setDialogTitle("Open snapshot");
         Config.LoadConfig();        
-        fc.setCurrentDirectory(new File(Config.strSnapFilePath));
+        fc.setCurrentDirectory(new File(Config.nullToEmpty(new File(Config.strSnapFilePath).getParent())));
+        fc.setSelectedFile(new File(Config.strSnapFilePath));
         fc.resetChoosableFileFilters();
         fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra snapshots", "osn"));
@@ -608,10 +617,14 @@ public class JOndra extends javax.swing.JFrame {
         
         if (val==JFileChooser.APPROVE_OPTION) {
             try {
-                m.loadSnapshot(fc.getSelectedFile().getCanonicalPath());
+                String strSnapName=fc.getSelectedFile().getCanonicalPath();
+                if(!getExtension(strSnapName).equalsIgnoreCase("osn")){
+                  strSnapName+=".osn";
+                }                
+                m.loadSnapshot(strSnapName);
                 //kdyby nekdo vybiral behem zrychleneho nahravani, tak timto se vrati rychlost na spravnou hodnotu
                 m.setClockSpeed(20); 
-                Config.strSnapFilePath=fc.getSelectedFile().getCanonicalPath();                
+                Config.strSnapFilePath=strSnapName;                
                 Config.SaveConfig();
             } catch (IOException ex) {
                 Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
@@ -621,14 +634,86 @@ public class JOndra extends javax.swing.JFrame {
         if (!pau) m.startEmulation();
     }//GEN-LAST:event_bOpensActionPerformed
 
+    public void setProposalName(String inName){
+        strSceenshotNameProposal=inName;
+        strSnapshotNameProposal=inName;
+    }
+    
+    public String getFilenameOnly(String fileName) {
+        String strNewFileName = "";
+        if (fileName != null) {
+            int i = fileName.lastIndexOf(File.separator);
+            if (i > 0) {
+                strNewFileName = fileName.substring(i + 1);
+            } else {
+                strNewFileName = fileName;
+            }
+            i = strNewFileName.lastIndexOf('.');
+            if (i > 0) {
+                strNewFileName = strNewFileName.substring(0, i);
+            }
+        }
+        return strNewFileName;
+    }
+    
     public String getExtension(String fileName) {
-        String extension="";
-        int i = fileName.lastIndexOf('.');
-        if (i > 0) {
-            extension = fileName.substring(i + 1);
+        String extension = "";
+        if (fileName != null) {
+            int i = fileName.lastIndexOf('.');
+            if (i > 0) {
+                extension = fileName.substring(i + 1);
+            }
         }
         return extension;
     }
+    
+    public String removeExtension(String fileName) {
+        String strNewFileName = "";
+        String strTemp;
+        if (fileName != null) {
+            int i = fileName.lastIndexOf(File.separator);
+            if (i > 0) {
+                strNewFileName = fileName.substring(0, i+1);
+                strTemp = fileName.substring(i + 1);
+
+            } else {
+                strNewFileName = "";
+                strTemp = fileName;
+            }
+            i = strTemp.lastIndexOf('.');
+            if (i > 0) {
+                strTemp = strTemp.substring(0, i);
+            }
+            strNewFileName += strTemp;
+        }
+        return strNewFileName;
+    }
+    
+    //vlozi do jmena souboru index pokud tam neni, pote vrati dalsi jmeno v poradi indexu
+    private String getNextFileName(String strCurrentFileName, String strDefault) {
+        String strRet = strDefault;
+        String strShort=new File(strCurrentFileName).getName();
+        String strExtension=getExtension(strShort);
+        if(!strExtension.isEmpty()){
+            strExtension="."+strExtension;
+        }
+        if (!strShort.isEmpty()) {
+            String strTmpNoExt = strShort;
+            if(!getExtension(strShort).isEmpty()){
+             strTmpNoExt = strShort.substring(0, strShort.lastIndexOf('.'));
+            }
+            Pattern pattern = Pattern.compile("^(.*\\D)(\\d+)$");
+            Matcher matcher = pattern.matcher(strTmpNoExt);
+            if (matcher.find()) { 
+                int nFmt=matcher.group(2).length();
+                int nNewVal=Integer.parseInt(matcher.group(2))+1;                
+                strRet=matcher.group(1)+String.format("%0"+nFmt+"d", nNewVal)+strExtension;
+            }else{
+                strRet=strTmpNoExt+"01"+strExtension;
+            }
+        }
+        return strRet;
+    }       
     
     
     private void bSavesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bSavesActionPerformed
@@ -636,9 +721,13 @@ public class JOndra extends javax.swing.JFrame {
         m.stopEmulation();
 
         fc.setDialogTitle("Save snapshot");
-        Config.LoadConfig();        
-        fc.setCurrentDirectory(new File(Config.strSnapFilePath));
-        fc.setSelectedFile(new File(Config.strSnapFilePath));
+        Config.LoadConfig();       
+        fc.setCurrentDirectory(new File(Config.nullToEmpty(new File(Config.strSnapFilePath).getParent())));
+        String strNewFileName=Config.strSnapFilePath;
+        if(!strSnapshotNameProposal.isEmpty()){
+           strNewFileName=strSnapshotNameProposal;
+        }
+        fc.setSelectedFile(new File(removeExtension(getNextFileName(strNewFileName,"snap01"))));
         fc.resetChoosableFileFilters();
         fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra snapshots", "osn"));
@@ -646,13 +735,13 @@ public class JOndra extends javax.swing.JFrame {
         
         if (val==JFileChooser.APPROVE_OPTION) {
             try {
-                String strSnap=fc.getSelectedFile().getCanonicalPath();
-                if(getExtension(strSnap).equalsIgnoreCase("osn")){
-                   m.saveSnapshot(strSnap); 
-                }else{
-                   m.saveSnapshot(strSnap+".osn");  
-                }                
-                Config.strSnapFilePath=fc.getSelectedFile().getCanonicalPath();                
+                String strSnap = fc.getSelectedFile().getCanonicalPath();
+                if (!getExtension(strSnap).equalsIgnoreCase("osn")) {
+                    strSnap += ".osn";
+                }
+                m.saveSnapshot(strSnap); 
+                strSnapshotNameProposal="";
+                Config.strSnapFilePath = strSnap;
                 Config.SaveConfig();
             } catch (IOException ex) {
                 Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
@@ -713,9 +802,9 @@ public class JOndra extends javax.swing.JFrame {
     }//GEN-LAST:event_jSaveMemoryBlockMenuActionPerformed
 
     private void jShowKeyboardActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jShowKeyboardActionPerformed
-        if(bFirstShow){
+        if(bFirstShowKbd){
          kbrd.setLocationRelativeTo(this);
-         bFirstShow=false;
+         bFirstShowKbd=false;
         }
         if(kbrd.isVisible()){
          m.getKeyboard().removeKeyboardPicture();
@@ -753,10 +842,14 @@ public class JOndra extends javax.swing.JFrame {
         boolean pau = m.isPaused();
         m.stopEmulation();
 
-        fc.setDialogTitle("Save snapshot");
-        Config.LoadConfig();
-        fc.setCurrentDirectory(new File(Config.strShotFilePath));
-        fc.setSelectedFile(new File(Config.strShotFilePath));
+        fc.setDialogTitle("Save screenshot");
+        Config.LoadConfig();         
+        fc.setCurrentDirectory(new File(Config.nullToEmpty(new File(Config.strShotFilePath).getParent())));        
+        String strNewFileName=Config.strShotFilePath;
+        if(!strSceenshotNameProposal.isEmpty()){
+           strNewFileName=strSceenshotNameProposal;           
+        }
+        fc.setSelectedFile(new File(removeExtension(getNextFileName(strNewFileName,"screen01"))));
         fc.resetChoosableFileFilters();
         fc.setAcceptAllFileFilterUsed(true);
         fc.setFileFilter(new FileNameExtensionFilter("Ondra screenshots", "png"));
@@ -773,8 +866,9 @@ public class JOndra extends javax.swing.JFrame {
                     ImageIO.write(shot, "png", outputfile);
                 } catch (IOException ex) {
                     Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                Config.strShotFilePath = fc.getSelectedFile().getCanonicalPath();
+                } 
+                strSceenshotNameProposal="";
+                Config.strShotFilePath = strSnap;
                 Config.SaveConfig();
             } catch (IOException ex) {
                 Logger.getLogger(JOndra.class.getName()).log(Level.SEVERE, null, ex);
@@ -821,6 +915,7 @@ public class JOndra extends javax.swing.JFrame {
         
         deb=new Debugger(m);        
         bopn=new BinOpen(m);
+        bopn.setParent(this);
         bsav=new BinSave(m);
         kbrd=new KeyboardPicture(this);
         m.setDebugger(deb);  

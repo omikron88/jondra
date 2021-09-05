@@ -24,8 +24,8 @@ public class Settings extends javax.swing.JDialog {
     /**
      * Creates new form Settings
      */
-    public Settings() {
-        initComponents();
+    public Settings() {        
+        initComponents();       
         ResetNeeded = false;
     }
     
@@ -35,7 +35,7 @@ public class Settings extends javax.swing.JDialog {
     
     public void showDialog(Config conf) {
         cf = conf;
-        setSize(414, 335);
+        setSize(414, 380);
         switch(cf.getRomType()) {
             case 0: {
                 bBasic.setSelected(true);
@@ -61,6 +61,8 @@ public class Settings extends javax.swing.JDialog {
         }
         tRomA.setText(cf.getRomA());
         tRomB.setText(cf.getRomB());
+        
+        jSound.setSelected(cf.getAudio());
         
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width-getSize().width)/2, (screen.height-getSize().height)/2);
@@ -99,15 +101,17 @@ public class Settings extends javax.swing.JDialog {
         tRomB = new javax.swing.JTextField();
         bRomB = new javax.swing.JButton();
         bOk = new javax.swing.JButton();
+        jSound = new javax.swing.JCheckBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Settings");
         setModal(true);
-        setName("SettingsDlg");
+        setName("SettingsDlg"); // NOI18N
         setResizable(false);
         getContentPane().setLayout(new java.awt.GridLayout(1, 0));
 
         jPanel1.setBorder(javax.swing.BorderFactory.createEtchedBorder(javax.swing.border.EtchedBorder.RAISED));
+        jPanel1.setRequestFocusEnabled(false);
 
         buttonGroup1.add(bBasic);
         bBasic.setText("Basic ROM");
@@ -186,37 +190,44 @@ public class Settings extends javax.swing.JDialog {
             }
         });
 
+        jSound.setSelected(true);
+        jSound.setText("Sound");
+        jSound.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jSoundActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(tRomB)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(bRomB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(tRomA)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(179, 179, 179)
-                        .addComponent(bOk)
-                        .addGap(0, 167, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addContainerGap()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                .addComponent(tRomB)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(bRomB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                .addComponent(tRomA)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(lRomB)
-                                    .addComponent(bCustom)
-                                    .addComponent(lRomA)
-                                    .addComponent(bTesla)
-                                    .addComponent(bVili)
-                                    .addComponent(bBasic))
-                                .addGap(0, 0, Short.MAX_VALUE)))))
+                            .addComponent(jSound)
+                            .addComponent(lRomB)
+                            .addComponent(bCustom)
+                            .addComponent(lRomA)
+                            .addComponent(bTesla)
+                            .addComponent(bVili)
+                            .addComponent(bBasic))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(167, 167, 167)
+                .addComponent(bOk)
+                .addContainerGap(191, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -237,13 +248,15 @@ public class Settings extends javax.swing.JDialog {
                     .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(lRomB)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 29, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(tRomB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(bRomB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(29, 29, 29)
+                .addGap(27, 27, 27)
+                .addComponent(jSound)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(bOk)
-                .addContainerGap())
+                .addGap(29, 29, 29))
         );
 
         getContentPane().add(jPanel1);
@@ -317,6 +330,13 @@ public class Settings extends javax.swing.JDialog {
             }
         }
     }//GEN-LAST:event_bRomBActionPerformed
+
+    private void jSoundActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jSoundActionPerformed
+        cf.setAudio(jSound.isSelected());
+        utils.Config.bAudio=cf.getAudio();
+        utils.Config.SaveConfig();
+        ResetNeeded = true;
+    }//GEN-LAST:event_jSoundActionPerformed
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton bBasic;
@@ -328,6 +348,7 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JRadioButton bVili;
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JCheckBox jSound;
     private javax.swing.JLabel lRomA;
     private javax.swing.JLabel lRomB;
     private javax.swing.JTextField tRomA;

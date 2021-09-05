@@ -27,6 +27,7 @@ import utils.Config;
  */
 public class BinOpen extends javax.swing.JFrame {
      private Ondra m;
+     private JOndra parent;
      
     /** Creates new form BinOpen */
     public BinOpen(Ondra inM) {
@@ -41,6 +42,10 @@ public class BinOpen extends javax.swing.JFrame {
                 m.startEmulation();
             }
         });
+    }
+    
+    public void setParent(JOndra parent){
+      this.parent=parent;
     }
     
     public void refreshDlg(){
@@ -225,9 +230,8 @@ public class BinOpen extends javax.swing.JFrame {
         int val = fc.showOpenDialog(this);
         
         if (val==JFileChooser.APPROVE_OPTION) {
-            try {
-                Config.strBinFilePath=fc.getSelectedFile().getCanonicalPath();
-                //jTextBinFile.setText(fc.getSelectedFile().getCanonicalPath());
+            try {                
+                Config.strBinFilePath=fc.getSelectedFile().getCanonicalPath();                
                 Config.SaveConfig();
                 refreshDlg();
             } catch (IOException ex) {
@@ -315,6 +319,10 @@ public class BinOpen extends javax.swing.JFrame {
                     m.cpu.setRegPC(Config.nRunBinAddress);
                 }
             }
+            if (parent != null) {
+                parent.setProposalName(parent.getFilenameOnly(Config.strBinFilePath));
+            }
+   
         } catch (Exception e) {
         }
         //nastavim Ondru na spravnou rychlost

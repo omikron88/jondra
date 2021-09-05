@@ -27,8 +27,9 @@ Save
 
 Debugger
 --------
+- Step Into, Step Over
 - 6 breakpoints (2 types)
 - memory editing in HEX mode
 - T-states count (resetable by double click)
 
-
+precise sound emulation

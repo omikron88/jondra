@@ -42,6 +42,8 @@ public class Ondra extends Thread
     public  Clock clk;
     public Z80 cpu;
     public Tape tap;
+    public Sound snd;
+    public long nLastMilisec=0;
     
     public JLabel GreenLed, YellowLed, TapeLed;
     public JToggleButton RecButton;
@@ -55,7 +57,7 @@ public class Ondra extends Thread
     private byte iov[];
    
     private int t_resolution_correct  = 0;
-    private int t_frame = T_DMAOFF+t_resolution_correct;    
+    private int t_frame = T_DMAOFF;    
     private int nDMAStatus = 0;
     
     private boolean tapestart;
@@ -71,11 +73,17 @@ public class Ondra extends Thread
         px = 
             ((DataBufferByte) img.getRaster().getDataBuffer()).getBankData()[0];
         cfg = new Config();
+        utils.Config.LoadConfig();
+        cfg.setAudio(utils.Config.bAudio);
         mem = new Memory(this, cfg);
         msSpeed = 20;
         tim = new Timer("Timer");
         clk = new Clock();
         cpu = new Z80(clk, this, this);
+        utils.Config.LoadConfig();
+        snd = new Sound();
+        snd.setEnabled(cfg.getAudio());
+        snd.init();
         iov = new byte[mem.PAGE_SIZE];
         mem.setIOVect(iov);
         key = new Keyboard(iov);
@@ -147,7 +155,7 @@ public class Ondra extends Thread
         portA3 = portA0 = 0;
         nDMAStatus = 0;
         t_resolution_correct=0;
-        t_frame = T_DMAOFF+t_resolution_correct;
+        t_frame = T_DMAOFF;
         mem.Reset(dirty);
         mem.mapRom(true);
         clk.reset();
@@ -157,7 +165,14 @@ public class Ondra extends Thread
         genDispTables();
         tapestart = false;
         if (RecButton!=null) { tap.tapeStop(); }
-        tap = new Tape(this);       
+        tap = new Tape(this);
+        if(snd.isEnabled()){
+         snd.deinit();
+        }
+         snd = new Sound();
+         snd.setEnabled(cfg.getAudio());
+         snd.init();
+        
     }
     
     public final void Nmi() {
@@ -209,18 +224,20 @@ public class Ondra extends Thread
         }
     }
 
-    public void ms20() {        
+    public void ms20() {         
         if (!paused) {
-
+            if(snd.isEnabled()){
+             snd.switchBuffers(clk.getTstates());
+             snd.setDataReady();
+            }
             scr.repaint();
             cpu.setINTLine(true);
             cpu.execute(clk.getTstates()+16);
             cpu.setINTLine(false);           
             if (!paused){
-               // System.out.println("t="+(t_frame-16)+",time="+System.currentTimeMillis());
                 cpu.execute(clk.getTstates()+t_frame-16);
-            }            
-        }  
+            }                  
+        }        
     }
             
     @Override
@@ -299,7 +316,7 @@ public class Ondra extends Thread
             cpu.bMemBP=true; //ukonci provadeni instrukci
             bExe=false;
          }
-        }
+        }        
         if(bExe){
          clk.addTstates(3);
          mem.writeByte(address, (byte) value);
@@ -343,9 +360,8 @@ public class Ondra extends Thread
     public void changeResolution() {
         //zmena rychlosti Ondry na zaklade rozliseni
         t_resolution_correct = (255 - nRozliseni) * 128;
-       //System.out.println("correction="+t_resolution_correct);
         if (nDMAStatus == 0) {
-            t_frame = T_DMAOFF + t_resolution_correct;
+            t_frame = T_DMAOFF;
         } else {
             t_frame = T_DMAON + t_resolution_correct;
         }
@@ -361,7 +377,7 @@ public class Ondra extends Thread
         if ((port & 0x08)==0) {
             portA3 = (byte) value;
             if ((portA3&0x01)==0) {
-                t_frame = T_DMAOFF+t_resolution_correct;
+                t_frame = T_DMAOFF;
                 nDMAStatus = 0;
                 dmaDisable();
                 scr.repaint();
@@ -388,6 +404,9 @@ public class Ondra extends Thread
             
         }
         if ((port & 0x01)==0) {
+            if (snd.isEnabled()) {
+                snd.fillBuffer.fillWithSample(((value & 224) >>> 5), clk.getTstates());                
+            }
             portA0 = (byte) value;
             if ((portA0&0x01)==0) {
                 GreenLed.setEnabled(true);
@@ -458,12 +477,14 @@ public class Ondra extends Thread
         
         try {
             fIn = new BufferedInputStream(new FileInputStream(filename));
-            //vymazu VRAM pamet Ondry          
+            //nastavim zakladni rozliseni a vymazu VRAM pamet Ondry          
+            nRozliseni=255;
+            changeResolution();
             for (i = 0xd800; i < 0x10000; i++) {
                 mem.writeByte(i, (byte)0);                
             }
-            nRozliseni=255;
-            genDispTables();
+            Arrays.fill(dispAdr, -1);
+
             Z80State state = new Z80State();
             try {
                 tmp = fIn.read();	//O
@@ -557,11 +578,11 @@ public class Ondra extends Thread
                 Logger.getLogger(Ondra.class.getName()).log(Level.SEVERE, null, ex);
             }
         } catch (FileNotFoundException ex) {
-            String msg =
-                java.util.ResourceBundle.getBundle("machine/Bundle").getString(
-                "FILE_RAM_ERROR");
-            System.out.println(String.format("%s: %s", msg, filename));
-            //Logger.getLogger(Spectrum.class.getName()).log(Level.SEVERE, null, ex);
+          //  String msg =
+          //      java.util.ResourceBundle.getBundle("machine/Bundle").getString(
+           //     "FILE_RAM_ERROR");
+          //  System.out.println(String.format("%s: %s", msg, filename));
+         
         }
     }
     
