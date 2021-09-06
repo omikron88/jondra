@@ -80,7 +80,6 @@ public class Ondra extends Thread
         tim = new Timer("Timer");
         clk = new Clock();
         cpu = new Z80(clk, this, this);
-        utils.Config.LoadConfig();
         snd = new Sound();
         snd.setEnabled(cfg.getAudio());
         snd.init();
@@ -168,6 +167,7 @@ public class Ondra extends Thread
         tap = new Tape(this);
         if(snd.isEnabled()){
          snd.deinit();
+         snd=null;
         }
          snd = new Sound();
          snd.setEnabled(cfg.getAudio());

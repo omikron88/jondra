@@ -33,14 +33,16 @@ public class SoundBuffer {
     public void fillWithSample(int nSampleNum, long lTstates) {
         if (nActiveSample != nSampleNum) {
             samples[nActiveSample].resetposition();
-            nActiveSample = nSampleNum;   
+            nActiveSample = nSampleNum;
         }
         long lStart = (long) ((double) (lTstates - lInitTStates) / Sound.dStates2BufferRatio);
         if ((lStart % 2) != 0) {
             lStart--;
-        }        
-        for (int i = (int) lStart; i < 2 * Sound.BUFFER_SIZE; i++) {
-            data[i] = samples[nSampleNum].getNextByte();
+        }
+        if ((lStart >= 0) && (lStart < 2 * Sound.BUFFER_SIZE)) {
+            for (int i = (int) lStart; i < 2 * Sound.BUFFER_SIZE; i++) {
+                data[i] = samples[nSampleNum].getNextByte();
+            }
         }
     }
 
@@ -51,6 +53,7 @@ public class SoundBuffer {
         Arrays.fill(data, (byte) 0);
     }
     
+    //naplni cely buffer aktivnim samplem
     public void fillAllWithActiveSample(){
         for (int i = 0; i < 2 * Sound.BUFFER_SIZE; i++) {
             data[i] = samples[nActiveSample].getNextByte();
