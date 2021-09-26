@@ -5,6 +5,7 @@
 package machine;
 
 import gui.Debugger;
+import gui.JOndra;
 import gui.Screen;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
@@ -42,6 +43,11 @@ public class Ondra extends Thread
     public  Clock clk;
     public Z80 cpu;
     public Tape tap;
+    private JOndra frame;
+    public static long nSpeedPercent=0;
+    public int nSpeedPercentUpdateMaxCycles=50;
+    public int nSpeedPercentUpdateDec=nSpeedPercentUpdateMaxCycles;
+    public long nLastSeen=System.currentTimeMillis()-1;
     public Sound snd;
     public long nLastMilisec=0;
     
@@ -98,6 +104,10 @@ public class Ondra extends Thread
     
     public void setDebugger(Debugger indeb){
         deb=indeb;
+    }
+    
+    public void setFrame(JOndra inJon){
+        frame=inJon;
     }
     
     public Debugger getDebugger(){
@@ -165,14 +175,18 @@ public class Ondra extends Thread
         tapestart = false;
         if (RecButton!=null) { tap.tapeStop(); }
         tap = new Tape(this);
-        if(snd.isEnabled()){
-         snd.deinit();
-         snd=null;
-        }
-         snd = new Sound();
+        if((snd.isEnabled())&&(!cfg.getAudio())){            
+         //musim disablovat audio
          snd.setEnabled(cfg.getAudio());
-         snd.init();
-        
+         snd.deinit();
+        }else{
+          if((!snd.isEnabled())&&(cfg.getAudio())){
+            //musim spustit audio
+            snd.setEnabled(cfg.getAudio());
+            snd.init();
+          }  
+        }
+                
     }
     
     public final void Nmi() {
@@ -224,7 +238,23 @@ public class Ondra extends Thread
         }
     }
 
-    public void ms20() {         
+    public void ms20() {  
+         //aktualizuji rychlost emulace
+        long nNowSeen=System.currentTimeMillis();
+        if((nNowSeen-nLastSeen)>0){
+         nSpeedPercent=nSpeedPercent+(int)(200000/(nNowSeen-nLastSeen));
+        }
+        nLastSeen=nNowSeen;
+        nSpeedPercentUpdateDec--;
+        //je treba zobrazit - prumer z 30 po sobe jdoucich hodnot + 20x predchozi zobrazena hodnota (aby byly zmeny plynulejsi)
+        if(nSpeedPercentUpdateDec<=0){
+         nSpeedPercentUpdateDec=nSpeedPercentUpdateMaxCycles;
+         //zaokrouhleni nahoru
+         nSpeedPercent=((nSpeedPercent/(10*nSpeedPercentUpdateMaxCycles))+7)/10;
+         frame.setTitle("Ondra SPO 186 - "+nSpeedPercent+"%");
+         nSpeedPercent=2000*nSpeedPercent;
+         nSpeedPercentUpdateDec-=20;
+        }
         if (!paused) {
             if(snd.isEnabled()){
              snd.switchBuffers(clk.getTstates());

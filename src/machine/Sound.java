@@ -5,6 +5,8 @@
  */
 package machine;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -32,7 +34,18 @@ public class Sound {
      PlayBuffer playThread = null;
      //zvukove zarizeni
      SourceDataLine audioLine = null;
+     Object objDeinit=new Object();
      
+    int FULL_BUFFER_SIZE=6*BUFFER_SIZE;
+    //udrzuje datovy tok na zukove zarizeni nepreruseny
+    public SoundGuard guard=null;
+    //limit pod ktery nesmi klesnout buffer zvukoveho zarizeni, jinak se zacnou posilat 0
+    public int limit5ms = 2*(int)sampleRate/100;
+    //blok ticha - same 0
+    private byte[] silent = new byte[limit5ms];
+    //indikuje prvni zaslani zvuku z Ondry, aby bylo mozno vlozit 10 sec. ticha na zacatek
+    public boolean bFirstFill=true;
+    
      //zvuk povolen/zakazan
      private boolean bEnabled=false;
      
@@ -51,14 +64,27 @@ public class Sound {
         fillBuffer = new SoundBuffer(0,samples);  
         //inicializace prehravaciho zarizeni
         openAudio();
-        if (bEnabled) {
-         //spusteni threadu pro plneni prehravaciho zarizeni
-         playThread = new PlayBuffer();
-         playThread.start();
-        }
+         if (bEnabled) {
+             startPlaying();
+             //thread, ktery kazde 2 msec. kontroluje, jestli je v bufferu zvuk.zarizeni dost dat
+             Timer tim = new Timer("GuardTimer");
+             guard=new SoundGuard();
+             tim.scheduleAtFixedRate(guard, 1, 2);
+
+         }
     }
     
     public void deinit() {
+        guard.cancel();
+        guard=null;
+        playThread.setDataReady();
+        playThread.setFinish();
+        try {
+            synchronized(objDeinit){
+             objDeinit.wait();
+            }
+        } catch (InterruptedException ex) {         
+        }
         closeAudio();
         playBuffer = null;
         fillBuffer = null;
@@ -75,7 +101,7 @@ public class Sound {
             DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
             try {
                 audioLine = (SourceDataLine) AudioSystem.getLine(info);
-                audioLine.open(format, 3 * BUFFER_SIZE);
+                audioLine.open(format, FULL_BUFFER_SIZE);
                 audioLine.start();
             } catch (Exception ex) {
                 //pocitac nema zvukovou kartu, nebo neumi uvedeny audioformat
@@ -107,10 +133,24 @@ public class Sound {
     //vyprazdni playBuffer s prenosem aktivniho samplu
     //a prohodi oba buffery
     public void switchBuffers(long nInitTStates) {
+        if(bFirstFill){
+             //vlozim 10ms ticha na zacatek, abych mel pak cas pri vypadku provest nejake kroky
+             bFirstFill=false;
+             fillBufferByZero();
+         }
         SoundBuffer tmpBuffer=playBuffer;
         tmpBuffer.emptyTransferActiveSample(nInitTStates,fillBuffer);
         playBuffer=fillBuffer;
         fillBuffer=tmpBuffer;        
+    }
+    
+     public void startPlaying() {
+        if (audioLine == null) {
+          openAudio();  
+        }
+        //spusteni threadu pro plneni prehravaciho zarizeni
+        playThread = new PlayBuffer();
+        playThread.start();
     }
     
    //dava prehravacimu threadu vedet, ze jsou data v bufferu pripravena pro prenos na zarizeni
@@ -120,23 +160,62 @@ public class Sound {
     
     //posila Buffer na zarizeni v samostatnem threadu
     private class PlayBuffer extends Thread {
+        private boolean bRunning=true;
         private CountDownLatch nTransfer = new CountDownLatch(1);
         
         public void setDataReady() {
            nTransfer.countDown();
         }
+        
+        public void setFinish() {
+           bRunning=false;
+        }
 
         public void run() {
             if (audioLine != null) {
-                while (true) {                  
+                while (bRunning) {                  
                     try {
                         nTransfer.await();
                     } catch (InterruptedException ex) {
                     }
-                    audioLine.write(playBuffer.data, 0, playBuffer.data.length);  
+                     audioLine.write(playBuffer.data, 0, playBuffer.data.length);  
                     nTransfer=new CountDownLatch(1);
                 }
+                synchronized(objDeinit){
+                    objDeinit.notifyAll();
+                }
             }
+        }
+    }
+        public void fillBufferByZero() {
+        if (!bFirstFill) {
+            if (audioLine != null) {
+                int nBufferFilled = FULL_BUFFER_SIZE - audioLine.available();
+                if (nBufferFilled <= limit5ms) {
+                    //neco je spatne, v bufferu zvuk.zarizeni je uz jen 5ms dat
+                    //poslu 10ms ticha
+                    audioLine.write(silent, 0, silent.length);
+                    audioLine.write(silent, 0, silent.length);
+                }
+            }
+        }
+    }
+    //thread hlidajici nepreruseny tok dat do zvukoveho zarizeni
+    //jinak by v Linuxu bylo slyset chrceni
+    public class SoundGuard extends TimerTask {
+       private long now, diff;
+        @Override
+        public synchronized void run() {           
+            now = System.currentTimeMillis();
+            diff = now - scheduledExecutionTime();
+            if (diff < 2) {
+                try {
+                    Thread.sleep(2 - diff);
+                } catch (InterruptedException ex) {
+                }
+                fillBufferByZero();
+            }
+
         }
     }
 }

@@ -191,7 +191,7 @@ public class Settings extends javax.swing.JDialog {
         });
 
         jSound.setSelected(true);
-        jSound.setText("Sound");
+        jSound.setText("Sound (uncheck if emulation speed is much less than 100%)");
         jSound.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jSoundActionPerformed(evt);

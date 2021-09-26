@@ -104,6 +104,8 @@ public class JOndra extends javax.swing.JFrame {
         jSaveMemoryBlockMenu = new javax.swing.JMenuItem();
         jSeparator3 = new javax.swing.JPopupMenu.Separator();
         jScreenshot = new javax.swing.JMenuItem();
+        jSeparator7 = new javax.swing.JPopupMenu.Separator();
+        jExit = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
         jReset = new javax.swing.JMenuItem();
         jPause = new javax.swing.JMenuItem();
@@ -427,6 +429,15 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
         jMenu1.add(jScreenshot);
+        jMenu1.add(jSeparator7);
+
+        jExit.setText("Exit");
+        jExit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jExitActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jExit);
 
         jMenuBar1.add(jMenu1);
 
@@ -881,6 +892,11 @@ public class JOndra extends javax.swing.JFrame {
 
     }//GEN-LAST:event_jScreenshotActionPerformed
 
+    private void jExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jExitActionPerformed
+
+        System.exit(0);        // TODO add your handling code here:
+    }//GEN-LAST:event_jExitActionPerformed
+
    private void jLoadMemoryBlockActionPerformed(java.awt.event.ActionEvent evt) {                                                 
         boolean pau = m.isPaused();
         
@@ -918,7 +934,8 @@ public class JOndra extends javax.swing.JFrame {
         bopn.setParent(this);
         bsav=new BinSave(m);
         kbrd=new KeyboardPicture(this);
-        m.setDebugger(deb);  
+        m.setDebugger(deb);
+        m.setFrame(this);
         
         m.setGreenLed(GreenLed);
         m.setYellowLed(YellowLed);        
@@ -999,6 +1016,7 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JMenu jAbout;
     private javax.swing.JButton jDebbuger;
     private javax.swing.JMenuItem jDebugger;
+    private javax.swing.JMenuItem jExit;
     private javax.swing.JMenuItem jKeyboardMenu;
     private javax.swing.JButton jLoadMem;
     private javax.swing.JMenuItem jLoadMemoryBlockMenu;
@@ -1024,6 +1042,7 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JToolBar.Separator jSeparator4;
     private javax.swing.JPopupMenu.Separator jSeparator5;
     private javax.swing.JPopupMenu.Separator jSeparator6;
+    private javax.swing.JPopupMenu.Separator jSeparator7;
     private javax.swing.JToolBar.Separator jSeparator8;
     private javax.swing.JMenuItem jSettings;
     private javax.swing.JButton jShowKeyboard;
