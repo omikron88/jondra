@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-/*
+ /*
  * BinOpen.java
  *
  * Created on Oct 7, 2019, 12:50:56 PM
@@ -26,13 +26,16 @@ import utils.Config;
  * @author Administrator
  */
 public class BinOpen extends javax.swing.JFrame {
-     private Ondra m;
-     private JOndra parent;
-     
-    /** Creates new form BinOpen */
+
+    private Ondra m;
+    private JOndra parent;
+
+    /**
+     * Creates new form BinOpen
+     */
     public BinOpen(Ondra inM) {
         initComponents();
-        setIconImage((new ImageIcon(getClass().getResource("/icons/binaryopn.png")).getImage())); 
+        setIconImage((new ImageIcon(getClass().getResource("/icons/binaryopn.png")).getImage()));
         Config.LoadConfig();
         m = inM;
         this.addWindowListener(new java.awt.event.WindowAdapter() {
@@ -43,19 +46,19 @@ public class BinOpen extends javax.swing.JFrame {
             }
         });
     }
-    
-    public void setParent(JOndra parent){
-      this.parent=parent;
+
+    public void setParent(JOndra parent) {
+        this.parent = parent;
     }
-    
-    public void refreshDlg(){
-      jTextBinFile.setText(Config.strBinFilePath);
-      jNumberTextSavAdr.setText(String.format("%04X",Config.nBeginBinAddress));
-      jCheckBox1.setSelected(Config.bRunBin);
-      jNumberTextRunAdr.setText(String.format("%04X",Config.nRunBinAddress));
-      jCheckAllRam.setSelected(Config.bAllRam);
-      jHeaderOn.setSelected(Config.bHeaderOn);
-      EnableHeaderOn();
+
+    public void refreshDlg() {
+        jTextBinFile.setText(Config.strBinFilePath);
+        jNumberTextSavAdr.setText(String.format("%04X", Config.nBeginBinAddress));
+        jCheckBox1.setSelected(Config.bRunBin);
+        jNumberTextRunAdr.setText(String.format("%04X", Config.nRunBinAddress));
+        jCheckAllRam.setSelected(Config.bAllRam);
+        jHeaderOn.setSelected(Config.bHeaderOn);
+        EnableHeaderOn();
     }
 
     public void EnableHeaderOn() {
@@ -71,7 +74,8 @@ public class BinOpen extends javax.swing.JFrame {
             jCheckBox1.setEnabled(true);
         }
     }
-     public void showDialog() {
+
+    public void showDialog() {
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width - getSize().width) / 2, (screen.height - getSize().height) / 2);
         refreshDlg();
@@ -207,12 +211,12 @@ public class BinOpen extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-     private static String getPath() {
+    private static String getPath() {
         String retVal = "";
-        if(Config.strBinFilePath.isEmpty()){
-         retVal = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        }else{
-         retVal=Config.strBinFilePath;  
+        if (Config.strBinFilePath.isEmpty()) {
+            retVal = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        } else {
+            retVal = Config.strBinFilePath;
         }
         if (retVal.contains("/")) {
             int pos = retVal.lastIndexOf("/");
@@ -220,7 +224,7 @@ public class BinOpen extends javax.swing.JFrame {
         }
         return retVal;
     }
-    
+
     private void jButtonBinOpenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonBinOpenActionPerformed
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("Open binary file");
@@ -228,38 +232,40 @@ public class BinOpen extends javax.swing.JFrame {
         fc.setCurrentDirectory(new File(getPath()));
         fc.setAcceptAllFileFilterUsed(true);
         int val = fc.showOpenDialog(this);
-        
-        if (val==JFileChooser.APPROVE_OPTION) {
-            try {                
-                Config.strBinFilePath=fc.getSelectedFile().getCanonicalPath();                
+
+        if (val == JFileChooser.APPROVE_OPTION) {
+            try {
+                Config.strBinFilePath = fc.getSelectedFile().getCanonicalPath();
                 Config.SaveConfig();
                 refreshDlg();
             } catch (IOException ex) {
-               
+
             }
         }
     }//GEN-LAST:event_jButtonBinOpenActionPerformed
 
     private void jNumberTextSavAdrFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jNumberTextSavAdrFocusLost
         int nNewAdr = Integer.valueOf(jNumberTextSavAdr.getText(), 16);
-        Config.nBeginBinAddress=nNewAdr;
+        Config.nBeginBinAddress = nNewAdr;
         Config.SaveConfig();
     }//GEN-LAST:event_jNumberTextSavAdrFocusLost
 
     private void jNumberTextRunAdrFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jNumberTextRunAdrFocusLost
-       int nNewAdr = Integer.valueOf(jNumberTextRunAdr.getText(), 16);
-       Config.nRunBinAddress=nNewAdr;
-       Config.SaveConfig();
+        int nNewAdr = Integer.valueOf(jNumberTextRunAdr.getText(), 16);
+        Config.nRunBinAddress = nNewAdr;
+        Config.SaveConfig();
     }//GEN-LAST:event_jNumberTextRunAdrFocusLost
 
     private void jCheckBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox1ActionPerformed
-       if(jCheckBox1.isSelected()){
-         Config.bRunBin=true;  
-       }else{
-         Config.bRunBin=false;  
-       }
-       Config.SaveConfig();
+        if (jCheckBox1.isSelected()) {
+            Config.bRunBin = true;
+        } else {
+            Config.bRunBin = false;
+        }
+        Config.SaveConfig();
     }//GEN-LAST:event_jCheckBox1ActionPerformed
+
+  
 
     private void jButtonOKActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonOKActionPerformed
         BufferedInputStream fIn;
@@ -273,8 +279,8 @@ public class BinOpen extends javax.swing.JFrame {
                 boolean bFinish = false;
                 while (!bFinish) {
                     int bType = fIn.read();
-                    if (bType==-1) {
-                        bFinish=true;
+                    if (bType == -1) {
+                        bFinish = true;
                         break;
                     }
                     int nMemAdr = 0;
@@ -292,15 +298,15 @@ public class BinOpen extends javax.swing.JFrame {
                             }
                         }
                     } else if (bType == 2) {
-                     //blok ke spusteni
-                     nMemAdr = fIn.read() + 256 * fIn.read();
-                     m.cpu.setRegPC(nMemAdr);
-                     bFinish=true;
-                     break;
+                        //blok ke spusteni
+                        nMemAdr = fIn.read() + 256 * fIn.read();
+                        m.cpu.setRegPC(nMemAdr);
+                        bFinish = true;
+                        break;
                     } else {
-                      m.Reset(true);
-                      break;
-                    };                   
+                        m.Reset(true);
+                        break;
+                    };
                 }
             } else {
                 //bez hlavicky
@@ -322,7 +328,7 @@ public class BinOpen extends javax.swing.JFrame {
             if (parent != null) {
                 parent.setProposalName(parent.getFilenameOnly(Config.strBinFilePath));
             }
-   
+
         } catch (Exception e) {
         }
         //nastavim Ondru na spravnou rychlost
@@ -332,33 +338,33 @@ public class BinOpen extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonOKActionPerformed
 
     private void jCheckAllRamActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckAllRamActionPerformed
-       if(jCheckAllRam.isSelected()){
-         Config.bAllRam=true;  
-       }else{
-         Config.bAllRam=false;  
-       }
-       Config.SaveConfig();
+        if (jCheckAllRam.isSelected()) {
+            Config.bAllRam = true;
+        } else {
+            Config.bAllRam = false;
+        }
+        Config.SaveConfig();
     }//GEN-LAST:event_jCheckAllRamActionPerformed
 
     private void jHeaderOnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jHeaderOnActionPerformed
-        if(jHeaderOn.isSelected()){
-         Config.bHeaderOn=true;
-       }else{
-         Config.bHeaderOn=false;  
-       }
-       EnableHeaderOn();
-       Config.SaveConfig();
+        if (jHeaderOn.isSelected()) {
+            Config.bHeaderOn = true;
+        } else {
+            Config.bHeaderOn = false;
+        }
+        EnableHeaderOn();
+        Config.SaveConfig();
     }//GEN-LAST:event_jHeaderOnActionPerformed
 
     private void jTextBinFileFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBinFileFocusLost
-                                     
+
         Config.strBinFilePath = jTextBinFile.getText();
         Config.SaveConfig();
         refreshDlg();
 
     }//GEN-LAST:event_jTextBinFileFocusLost
 
-   
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonBinOpen;
     private javax.swing.JButton jButtonOK;

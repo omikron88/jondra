@@ -15,7 +15,7 @@ import java.util.Arrays;
 public class SoundBuffer {
     
     byte[] data = null;
-    int nActiveSample;
+    public int nActiveSample;
     
     //pocatecni stav pocitadla t-states
     public long lInitTStates;

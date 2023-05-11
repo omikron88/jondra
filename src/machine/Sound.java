@@ -49,7 +49,7 @@ public class Sound {
      //zvuk povolen/zakazan
      private boolean bEnabled=false;
      
-     public void init() {         
+     public void init() {          
         //nacteni samplu pro jednotlive tony     
         samples[0] = new SoundSample(new byte[]{0, 0});
         samples[1] = new SoundSample("/sound/1.sample");
@@ -72,6 +72,7 @@ public class Sound {
              tim.scheduleAtFixedRate(guard, 1, 2);
 
          }
+
     }
     
     public void deinit() {
@@ -92,6 +93,7 @@ public class Sound {
     
     //otevre audio prehravac
     public void openAudio() {
+
         if (bEnabled) {
             final boolean bigEndian = false;
             final boolean signed = true;

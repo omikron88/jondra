@@ -35,7 +35,7 @@ public class Settings extends javax.swing.JDialog {
     
     public void showDialog(Config conf) {
         cf = conf;
-        setSize(414, 380);
+        setSize(414, 410);
         switch(cf.getRomType()) {
             case 0: {
                 bBasic.setSelected(true);
@@ -63,6 +63,7 @@ public class Settings extends javax.swing.JDialog {
         tRomB.setText(cf.getRomB());
         
         jSound.setSelected(cf.getAudio());
+        jMelodik.setSelected(cf.getMelodik());
         
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width-getSize().width)/2, (screen.height-getSize().height)/2);
@@ -102,6 +103,7 @@ public class Settings extends javax.swing.JDialog {
         bRomB = new javax.swing.JButton();
         bOk = new javax.swing.JButton();
         jSound = new javax.swing.JCheckBox();
+        jMelodik = new javax.swing.JCheckBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Settings");
@@ -198,10 +200,22 @@ public class Settings extends javax.swing.JDialog {
             }
         });
 
+        jMelodik.setSelected(true);
+        jMelodik.setText("Melodik");
+        jMelodik.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMelodikActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(167, 167, 167)
+                .addComponent(bOk)
+                .addContainerGap(191, Short.MAX_VALUE))
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -215,6 +229,7 @@ public class Settings extends javax.swing.JDialog {
                         .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jMelodik)
                             .addComponent(jSound)
                             .addComponent(lRomB)
                             .addComponent(bCustom)
@@ -224,10 +239,6 @@ public class Settings extends javax.swing.JDialog {
                             .addComponent(bBasic))
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(167, 167, 167)
-                .addComponent(bOk)
-                .addContainerGap(191, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -254,9 +265,11 @@ public class Settings extends javax.swing.JDialog {
                     .addComponent(bRomB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(27, 27, 27)
                 .addComponent(jSound)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jMelodik)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(bOk)
-                .addGap(29, 29, 29))
+                .addContainerGap(26, Short.MAX_VALUE))
         );
 
         getContentPane().add(jPanel1);
@@ -337,6 +350,13 @@ public class Settings extends javax.swing.JDialog {
         utils.Config.SaveConfig();
         ResetNeeded = true;
     }//GEN-LAST:event_jSoundActionPerformed
+
+    private void jMelodikActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMelodikActionPerformed
+        cf.setMelodik(jMelodik.isSelected());
+        utils.Config.bMelodik=cf.getMelodik();
+        utils.Config.SaveConfig();
+        ResetNeeded = true;
+    }//GEN-LAST:event_jMelodikActionPerformed
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton bBasic;
@@ -347,6 +367,7 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JRadioButton bTesla;
     private javax.swing.JRadioButton bVili;
     private javax.swing.ButtonGroup buttonGroup1;
+    private javax.swing.JCheckBox jMelodik;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JCheckBox jSound;
     private javax.swing.JLabel lRomA;

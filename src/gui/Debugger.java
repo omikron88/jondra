@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-/*
+ /*
  * Debugger.java
  *
  * Created on Oct 5, 2019, 8:51:34 PM
@@ -24,6 +24,7 @@ import java.awt.font.FontRenderContext;
 import java.awt.geom.Rectangle2D;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import javax.swing.ImageIcon;
@@ -36,76 +37,77 @@ import machine.Ondra;
 import utils.JNumberTextField;
 import z80core.Z80.IntMode;
 
-
-
 public class Debugger extends javax.swing.JFrame {
 
-      public class StepBP{
+    public class StepBP {
+
         boolean bStatus;
         int nAdress;
-        StepBP(){
-          bStatus=false;
-          nAdress=0; 
+
+        StepBP() {
+            bStatus = false;
+            nAdress = 0;
         }
     }
 
-            
     private Ondra m;
-    public StepBP stpBP=new StepBP();
-    javax.swing.ImageIcon icoRun= new javax.swing.ImageIcon(getClass().getResource("/icons/rundbg.png"));
-    javax.swing.ImageIcon icoStop=new javax.swing.ImageIcon(getClass().getResource("/icons/stopdbg.png"));
-    static int nBP1=-1;
-    static int nBP2=-1;
-    static int nBP3=-1;
-    static int nBP4=-1;
-    static int nBP5=-1;
-    static int nBP6=-1;
-    static int nDataShow=0;
-    static boolean bBP1Checked=false;
-    static boolean bBP2Checked=false;
-    static boolean bBP3Checked=false;
-    static boolean bBP4Checked=false;
-    static boolean bBP5Checked=false;
-    static boolean bBP6Checked=false;
-    static boolean bBP1Updt=true;
-    static boolean bShowCode=true;
-    static boolean bZ80=false;
-    
-    static long nLastClick=0;
-    static long nLastClickAsm=0;    
-    static int nStepPlusAsm=0;
-    static long nLastClickText=0;
-    static Point pntPos=new Point(-1,-1);
+    public StepBP stpBP = new StepBP();
+    javax.swing.ImageIcon icoRun = new javax.swing.ImageIcon(getClass().getResource("/icons/rundbg.png"));
+    javax.swing.ImageIcon icoStop = new javax.swing.ImageIcon(getClass().getResource("/icons/stopdbg.png"));
+    static int nBP1 = -1;
+    static int nBP2 = -1;
+    static int nBP3 = -1;
+    static int nBP4 = -1;
+    static int nBP5 = -1;
+    static int nBP6 = -1;
+    static int nDataShow = 0;
+    static boolean bBP1Checked = false;
+    static boolean bBP2Checked = false;
+    static boolean bBP3Checked = false;
+    static boolean bBP4Checked = false;
+    static boolean bBP5Checked = false;
+    static boolean bBP6Checked = false;
+    static boolean bBP1Updt = true;
+    static boolean bShowCode = true;
+    static boolean bZ80 = false;
+
+    static long nLastClick = 0;
+    static long nLastClickAsm = 0;
+    static int nStepPlusAsm = 0;
+    static int nStepMinusAsm = 0;
+    static long nLastClickText = 0;
+    static Point pntPos = new Point(-1, -1);
     JNumberTextField txtByte = null;
     Integer nByteAddress = null;
     Font fntDefaultMonospace = null;
 
-    /** Creates new form Debugger */
+    /**
+     * Creates new form Debugger
+     */
     public Debugger(Ondra inM) {
         initComponents();
         setIconImage((new ImageIcon(getClass().getResource("/icons/debugger.png")).getImage()));
-        ((DefaultCaret)jTextAsmCode.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
-        jScrollPane1.setHorizontalScrollBarPolicy( JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        ((DefaultCaret) jTextAsmCode.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+        jScrollPane1.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane1.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
 
-        ((DefaultCaret)jTextData.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
-        jScrollPane5.setHorizontalScrollBarPolicy( JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        ((DefaultCaret) jTextData.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+        jScrollPane5.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane5.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-        
+
         jRunButton.setIcon(icoRun);
-        
-        Font fntSelected=selectMonospaceFont();        
+
+        Font fntSelected = selectMonospaceFont();
         fntDefaultMonospace = new Font(fntSelected.getName(), Font.BOLD, 12);
-        
-        
+
         //System.out.println(fntDefaultMonospace.getName());
-        jTextAsmCode.setFont(fntDefaultMonospace);        
+        jTextAsmCode.setFont(fntDefaultMonospace);
         jTextData.setFont(fntDefaultMonospace);
         jTextRegistry.setFont(fntDefaultMonospace);
         jTextFlags.setFont(fntDefaultMonospace);
         jTextStack.setFont(fntDefaultMonospace);
         jLabelTStates.setFont(fntDefaultMonospace);
-        
+
         jTextData.addMouseWheelListener(new MouseWheelListener() {
 
             public void mouseWheelMoved(MouseWheelEvent e) {
@@ -114,23 +116,26 @@ public class Debugger extends javax.swing.JFrame {
                 if (!utils.Config.bShowCode) {
                     nDecStep = 1;
                     nIncStep = 1;
-                    if(nStepPlusAsm!=0){
-                      nIncStep=nStepPlusAsm;
+                    if (nStepPlusAsm != 0) {
+                        nIncStep = nStepPlusAsm;
+                    }
+                    if (nStepMinusAsm != 0) {
+                        nDecStep = nStepMinusAsm;
                     }
                 }
                 if (e.getWheelRotation() < 0) {
                     //System.out.println("Up... " + e.getWheelRotation());
-                    
-                    nDataShow-=nDecStep;
-                    if(nDataShow<0){
-                        nDataShow=65536+nDataShow;
+
+                    nDataShow -= nDecStep;
+                    if (nDataShow < 0) {
+                        nDataShow = 65536 + nDataShow;
                     }
                     fillDataShow();
                 } else {
                     //System.out.println("Down... " + e.getWheelRotation());
-                    nDataShow+=nIncStep;
-                    if(nDataShow>65535){
-                        nDataShow=65536-nDataShow;
+                    nDataShow += nIncStep;
+                    if (nDataShow > 65535) {
+                        nDataShow = 65536 - nDataShow;
                     }
                     fillDataShow();
                 }
@@ -139,154 +144,151 @@ public class Debugger extends javax.swing.JFrame {
         });
 
         utils.Config.LoadConfig();
-        bBP1Checked=utils.Config.bBP1;
-        bBP2Checked=utils.Config.bBP2;
-        bBP3Checked=utils.Config.bBP3;
-        bBP4Checked=utils.Config.bBP4;
-        bBP5Checked=utils.Config.bBP5;
-        bBP6Checked=utils.Config.bBP6;
-        nBP1=utils.Config.nBP1Address;
-        nBP2=utils.Config.nBP2Address;
-        nBP3=utils.Config.nBP3Address;
-        nBP4=utils.Config.nBP4Address;
-        nBP5=utils.Config.nBP5Address;
-        nBP6=utils.Config.nBP6Address;
-        nDataShow=utils.Config.nMemAddress;
-        m = inM; 
+        bBP1Checked = utils.Config.bBP1;
+        bBP2Checked = utils.Config.bBP2;
+        bBP3Checked = utils.Config.bBP3;
+        bBP4Checked = utils.Config.bBP4;
+        bBP5Checked = utils.Config.bBP5;
+        bBP6Checked = utils.Config.bBP6;
+        nBP1 = utils.Config.nBP1Address;
+        nBP2 = utils.Config.nBP2Address;
+        nBP3 = utils.Config.nBP3Address;
+        nBP4 = utils.Config.nBP4Address;
+        nBP5 = utils.Config.nBP5Address;
+        nBP6 = utils.Config.nBP6Address;
+        nDataShow = utils.Config.nMemAddress;
+        m = inM;
         setBpoints();
-    //     m.genDispTables();
-         m.scr.repaint();
+        //     m.genDispTables();
+        m.scr.repaint();
         this.addWindowListener(new java.awt.event.WindowAdapter() {
 
             @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {  
-                pntPos=getLocation();
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                pntPos = getLocation();
                 m.startEmulation();
             }
         });
     }
-    
-    
-    public void setBpoints(){
-        if(bBP1Checked){
-         m.cpu.setBreakpoint(nBP1, true);
+
+    public void setBpoints() {
+        if (bBP1Checked) {
+            m.cpu.setBreakpoint(nBP1, true);
         }
-        if(bBP2Checked){
-         m.cpu.setBreakpoint(nBP2, true);
+        if (bBP2Checked) {
+            m.cpu.setBreakpoint(nBP2, true);
         }
-        if(bBP3Checked){
-         m.cpu.setBreakpoint(nBP3, true);
+        if (bBP3Checked) {
+            m.cpu.setBreakpoint(nBP3, true);
         }
-        if(bBP4Checked){
-         m.cpu.setBreakpoint(nBP4, true);
+        if (bBP4Checked) {
+            m.cpu.setBreakpoint(nBP4, true);
         }
-        if(bBP5Checked){
-         m.cpu.setBreakpoint(nBP5, true);
+        if (bBP5Checked) {
+            m.cpu.setBreakpoint(nBP5, true);
         }
     }
-    
- 
-    public void fillAsmCode(){
+
+    public void fillAsmCode() {
         //vyplni textove pole s assemblerem
         jTextAsmCode.setText("");
-        Z80Dis disassembler=new Z80Dis();
-        Z80Dis.Opcodes=new int[65536];
+        Z80Dis disassembler = new Z80Dis();
+        Z80Dis.Opcodes = new int[65536];
         int memPtr = m.cpu.getRegPC();
-        for(int j=0;j<10;j++){
-        int memPtrTmp=memPtr;
-        for(int i=memPtr;i<memPtr+5;i++){
-           Z80Dis.Opcodes[i]= (0xff) & (byte)m.mem.readByte(memPtrTmp);
-           memPtrTmp++;
-        }
-        byte OpcodeLen = disassembler.OpcodeLen(memPtr);
-        String instdata="";
-        for(int i=memPtr;i<memPtr+OpcodeLen;i++){
-          instdata+=String.format("%02X",(byte)Z80Dis.Opcodes[i]);  
-        }
-        for(int i=0;i<4-OpcodeLen;i++){
-          instdata+="  ";  
-        }
-        String instrukce=String.format( "#%04X", memPtr)+" "+instdata+" "+disassembler.Disassemble(memPtr)+"\n";
-        jTextAsmCode.append(instrukce); 
+        for (int j = 0; j < 10; j++) {
+            int memPtrTmp = memPtr;
+            for (int i = memPtr; i < memPtr + 5; i++) {
+                Z80Dis.Opcodes[i] = (0xff) & (byte) m.mem.readByte(memPtrTmp);
+                memPtrTmp++;
+            }
+            byte OpcodeLen = disassembler.OpcodeLen(memPtr);
+            String instdata = "";
+            for (int i = memPtr; i < memPtr + OpcodeLen; i++) {
+                instdata += String.format("%02X", (byte) Z80Dis.Opcodes[i]);
+            }
+            for (int i = 0; i < 4 - OpcodeLen; i++) {
+                instdata += "  ";
+            }
+            String instrukce = String.format("#%04X", memPtr) + " " + instdata + " " + disassembler.Disassemble(memPtr) + "\n";
+            jTextAsmCode.append(instrukce);
             if (j == 0) {
                 Highlighter h = jTextAsmCode.getHighlighter();
                 try {
-                    h.addHighlight(0, instrukce.length()-1, DefaultHighlighter.DefaultPainter);
+                    h.addHighlight(0, instrukce.length() - 1, DefaultHighlighter.DefaultPainter);
                 } catch (Exception e1) {
                 }
-                stpBP.nAdress=memPtr+OpcodeLen;
-                stpBP.bStatus=false;
+                stpBP.nAdress = memPtr + OpcodeLen;
+                stpBP.bStatus = false;
             }
-        memPtr+=OpcodeLen;
+            memPtr += OpcodeLen;
         }
     }
-    
-    
-    public void fillRegistry(){
-     jTextRegistry.setText("");
-     String strAF=String.format("AF:#%04X\n",m.cpu.getRegAF());  
-     jTextRegistry.append(strAF);  
-     String strBC=String.format("BC:#%04X\n",m.cpu.getRegBC());  
-     jTextRegistry.append(strBC);   
-     String strDE=String.format("DE:#%04X\n",m.cpu.getRegDE());  
-     jTextRegistry.append(strDE); 
-     String strHL=String.format("HL:#%04X\n",m.cpu.getRegHL());  
-     jTextRegistry.append(strHL);
-     String strIX=String.format("IX:#%04X\n",m.cpu.getRegIX());  
-     jTextRegistry.append(strIX);
-     String strIY=String.format("IY:#%04X\n",m.cpu.getRegIY());  
-     jTextRegistry.append(strIY);
-     String strPC=String.format("PC:#%04X\n",m.cpu.getRegPC());  
-     jTextRegistry.append(strPC);
-     String strSP=String.format("SP:#%04X\n",m.cpu.getRegSP());  
-     jTextRegistry.append(strSP);
-     String strR=String.format("R:#%02X\n",m.cpu.getRegR());  
-     jTextRegistry.append(strR);
-     String strI=String.format("I:#%02X\n",m.cpu.getRegI());  
-     jTextRegistry.append(strI); 
-          
-     IntMode iM = m.cpu.getIM();
-     jTextRegistry.append((iM == IntMode.IM0) ? "IM0":(iM == IntMode.IM1) ? "IM1":"IM2");
 
-     DecimalFormat nf = new DecimalFormat("T:0000000000000000000");
-     String strTStates=nf.format(m.cpu.clock.getTstates());  
-     jLabelTStates.setText(strTStates);
+    public void fillRegistry() {
+        jTextRegistry.setText("");
+        String strAF = String.format("AF:#%04X\n", m.cpu.getRegAF());
+        jTextRegistry.append(strAF);
+        String strBC = String.format("BC:#%04X\n", m.cpu.getRegBC());
+        jTextRegistry.append(strBC);
+        String strDE = String.format("DE:#%04X\n", m.cpu.getRegDE());
+        jTextRegistry.append(strDE);
+        String strHL = String.format("HL:#%04X\n", m.cpu.getRegHL());
+        jTextRegistry.append(strHL);
+        String strIX = String.format("IX:#%04X\n", m.cpu.getRegIX());
+        jTextRegistry.append(strIX);
+        String strIY = String.format("IY:#%04X\n", m.cpu.getRegIY());
+        jTextRegistry.append(strIY);
+        String strPC = String.format("PC:#%04X\n", m.cpu.getRegPC());
+        jTextRegistry.append(strPC);
+        String strSP = String.format("SP:#%04X\n", m.cpu.getRegSP());
+        jTextRegistry.append(strSP);
+        String strR = String.format("R:#%02X\n", m.cpu.getRegR());
+        jTextRegistry.append(strR);
+        String strI = String.format("I:#%02X\n", m.cpu.getRegI());
+        jTextRegistry.append(strI);
+
+        IntMode iM = m.cpu.getIM();
+        jTextRegistry.append((iM == IntMode.IM0) ? "IM0" : (iM == IntMode.IM1) ? "IM1" : "IM2");
+
+        DecimalFormat nf = new DecimalFormat("T:0000000000000000000");
+        String strTStates = nf.format(m.cpu.clock.getTstates());
+        jLabelTStates.setText(strTStates);
     }
-    
-    public void fillFlags(){
-        jTextFlags.setText("");
-     int flags=m.cpu.getFlags();  
 
-     if((flags & 0x80)!=0){
-        jTextFlags.append("M\n");
-     }else{
-        jTextFlags.append("P\n"); 
-     }
-    if((flags & 0x40)!=0){
-        jTextFlags.append("Z\n");
-     }else{
-        jTextFlags.append("NZ\n"); 
-     }
-     if((flags & 0x10)!=0){
-        jTextFlags.append("AC\n");
-     }else{
-        jTextFlags.append("NA\n"); 
-     }
-     if((flags & 0x4)!=0){
-        jTextFlags.append("PE\n");
-     }else{
-        jTextFlags.append("PO\n"); 
-     }
-     if((flags & 0x2)!=0){
-        jTextFlags.append("N1\n");
-     }else{
-        jTextFlags.append("N0\n"); 
-     }
-     if((flags & 0x1)!=0){
-        jTextFlags.append("C\n");
-     }else{
-        jTextFlags.append("NC\n"); 
-     }
+    public void fillFlags() {
+        jTextFlags.setText("");
+        int flags = m.cpu.getFlags();
+
+        if ((flags & 0x80) != 0) {
+            jTextFlags.append("M\n");
+        } else {
+            jTextFlags.append("P\n");
+        }
+        if ((flags & 0x40) != 0) {
+            jTextFlags.append("Z\n");
+        } else {
+            jTextFlags.append("NZ\n");
+        }
+        if ((flags & 0x10) != 0) {
+            jTextFlags.append("AC\n");
+        } else {
+            jTextFlags.append("NA\n");
+        }
+        if ((flags & 0x4) != 0) {
+            jTextFlags.append("PE\n");
+        } else {
+            jTextFlags.append("PO\n");
+        }
+        if ((flags & 0x2) != 0) {
+            jTextFlags.append("N1\n");
+        } else {
+            jTextFlags.append("N0\n");
+        }
+        if ((flags & 0x1) != 0) {
+            jTextFlags.append("C\n");
+        } else {
+            jTextFlags.append("NC\n");
+        }
     }
 
     public void fillStack() {
@@ -311,53 +313,53 @@ public class Debugger extends javax.swing.JFrame {
         String strA3 = String.format("port F7:#%02X\n", m.portA3);
         jTextStack.append(strA3);
     }
-    
-    public void fillBps(){
-      jCheckBP1.setSelected(bBP1Checked);
-      if(nBP1!=-1){
-          jTextBP1.setText(String.format("%04X",nBP1));
-      }
-      
-      jCheckBP2.setSelected(bBP2Checked);
-      if(nBP2!=-1){
-          jTextBP2.setText(String.format("%04X",nBP2));
-      }
-      
-      jCheckBP3.setSelected(bBP3Checked);
-      if(nBP3!=-1){
-          jTextBP3.setText(String.format("%04X",nBP3));
-      }
-      
-      jCheckBP4.setSelected(bBP4Checked);
-      if(nBP4!=-1){
-          jTextBP4.setText(String.format("%04X",nBP4));
-      }
-      
-      jCheckBP5.setSelected(bBP5Checked);
-      if(nBP5!=-1){
-          jTextBP5.setText(String.format("%04X",nBP5));
-      }
-      
-      jCheckBP6.setSelected(bBP6Checked);
-      if(nBP6!=-1){
-          jTextBP6.setText(String.format("%04X",nBP6));
-      }
-      
-      utils.Config.bBP1=bBP1Checked;
-      utils.Config.nBP1Address=nBP1;
-      utils.Config.bBP2=bBP2Checked;
-      utils.Config.nBP2Address=nBP2;
-      utils.Config.bBP3=bBP3Checked;
-      utils.Config.nBP3Address=nBP3;
-      utils.Config.bBP4=bBP4Checked;
-      utils.Config.nBP4Address=nBP4;
-      utils.Config.bBP5=bBP5Checked;
-      utils.Config.nBP5Address=nBP5;
-      utils.Config.bBP6=bBP6Checked;
-      utils.Config.nBP6Address=nBP6;
-      utils.Config.SaveConfig();
+
+    public void fillBps() {
+        jCheckBP1.setSelected(bBP1Checked);
+        if (nBP1 != -1) {
+            jTextBP1.setText(String.format("%04X", nBP1));
+        }
+
+        jCheckBP2.setSelected(bBP2Checked);
+        if (nBP2 != -1) {
+            jTextBP2.setText(String.format("%04X", nBP2));
+        }
+
+        jCheckBP3.setSelected(bBP3Checked);
+        if (nBP3 != -1) {
+            jTextBP3.setText(String.format("%04X", nBP3));
+        }
+
+        jCheckBP4.setSelected(bBP4Checked);
+        if (nBP4 != -1) {
+            jTextBP4.setText(String.format("%04X", nBP4));
+        }
+
+        jCheckBP5.setSelected(bBP5Checked);
+        if (nBP5 != -1) {
+            jTextBP5.setText(String.format("%04X", nBP5));
+        }
+
+        jCheckBP6.setSelected(bBP6Checked);
+        if (nBP6 != -1) {
+            jTextBP6.setText(String.format("%04X", nBP6));
+        }
+
+        utils.Config.bBP1 = bBP1Checked;
+        utils.Config.nBP1Address = nBP1;
+        utils.Config.bBP2 = bBP2Checked;
+        utils.Config.nBP2Address = nBP2;
+        utils.Config.bBP3 = bBP3Checked;
+        utils.Config.nBP3Address = nBP3;
+        utils.Config.bBP4 = bBP4Checked;
+        utils.Config.nBP4Address = nBP4;
+        utils.Config.bBP5 = bBP5Checked;
+        utils.Config.nBP5Address = nBP5;
+        utils.Config.bBP6 = bBP6Checked;
+        utils.Config.nBP6Address = nBP6;
+        utils.Config.SaveConfig();
     }
-    
+
     public void fillDataShow() {
         if (txtByte != null) {
             jTextData.remove(txtByte);
@@ -375,7 +377,8 @@ public class Debugger extends javax.swing.JFrame {
         jTextData.setText("");
         int nMemAdr = Integer.valueOf(jTextAdr.getText(), 16);
         if (utils.Config.bShowCode) {
-            nStepPlusAsm=0;
+            nStepPlusAsm = 0;
+            nStepMinusAsm = 0;
             //zobraz hexa vypis
             for (int i = 0; i < 7; i++) {
                 String strAsci = "";
@@ -420,47 +423,129 @@ public class Debugger extends javax.swing.JFrame {
                 }
                 String instrukce = String.format("#%04X", memPtr) + " " + instdata + " " + disassembler.Disassemble(memPtr) + "\n";
                 jTextData.append(instrukce);
-                if (j == 0) {                
-                    nStepPlusAsm=OpcodeLen;
+                if (j == 0) {
+                    nStepPlusAsm = OpcodeLen;
                 }
                 memPtr += OpcodeLen;
-                if(memPtr>65535){
-                    memPtr=memPtr-65536;
+                if (memPtr > 65535) {
+                    memPtr = memPtr - 65536;
                 }
             }
-            
+            //odhad delky predchozi instrukce ToMi 
+            // - skoci o 40 bajtu nazpet a zkusi 10x disassemblovat s posunem po 1 bajtu vpred
+            //nejcetnejsi predchazejici adresa je povazovana za spravnou
+            memPtr = nMemAdr;
+            int memPtrOver = memPtr;
+
+            int[] nAdressesTmp = new int[10];
+            int[] nAdressesTmp2 = new int[10];
+            int[] nAdressesCount = new int[10];
+            int nCntAdd = 0;
+            int nCntAdd2 = 0;
+            int nActualPos=0;
+            int nCorrection=0;
+            Arrays.fill(nAdressesTmp, (byte) 0);
+            Arrays.fill(nAdressesTmp2, (byte) 0);
+            Arrays.fill(nAdressesCount, (byte) 0);
+
+            int nShift = 30;
+            while (nShift < 40) {
+                nCorrection=0;
+                int memPtrTmpStart = memPtr - nShift;
+                if (memPtrTmpStart < 0) {
+                    memPtrTmpStart = 65536 + memPtrTmpStart;
+                    nCorrection=65536;
+                }
+                int memPtrTmp = memPtrTmpStart;
+
+                for (int i = memPtrTmpStart; i <= memPtrTmpStart + 50; i++) {
+                    Z80Dis.Opcodes[i] = (0xff) & (byte) m.mem.readByte(memPtrTmp);
+                    memPtrTmp++;
+                    if (memPtrTmp == 65536) {
+                        memPtrTmp = 0;
+                    }
+                }
+                
+                memPtrTmp = memPtrTmpStart;
+                //loop
+                boolean bFinish = false;
+                int nLastAddress = memPtrTmp;
+                while (bFinish == false) {
+                    byte OpcodeLen = disassembler.OpcodeLen(memPtrTmp);
+                    if (memPtrTmp + OpcodeLen > memPtrOver+nCorrection) {
+                        nAdressesTmp[nCntAdd] = nLastAddress;
+                        nCntAdd++;
+                        bFinish = true;
+                    } else {
+                        nLastAddress = memPtrTmp;
+                    }
+                    memPtrTmp += OpcodeLen;
+                }
+                nShift++;
+            }
+            //zjistim cetnost vyskytu
+            for(nCntAdd2=0;nCntAdd2<nCntAdd;nCntAdd2++){
+                boolean bSet=false;
+                for(int i=0;(i<nActualPos)&&(bSet==false);i++){
+                 if(nAdressesTmp2[i]==nAdressesTmp[nCntAdd2]){
+                     nAdressesCount[i]=nAdressesCount[i]+1;
+                     bSet=true;
+                 }
+                }
+                if(bSet==false){
+                    nAdressesTmp2[nActualPos]=nAdressesTmp[nCntAdd2];
+                    nActualPos++;
+                }
+            }
+            //najdu nejcetnejsi adresu
+            int nMaxAddr=nAdressesTmp2[0];
+            int nMaxValue=0;
+            for(int i=0;i<nCntAdd;i++){
+                if(nAdressesCount[i]>=nMaxValue){
+                    nMaxValue=nAdressesCount[i];
+                    nMaxAddr= nAdressesTmp2[i];
+                }
+            }
+            nStepMinusAsm=memPtrOver-nMaxAddr;
+            if(nStepMinusAsm<0){
+               nStepMinusAsm = 65536 + nStepMinusAsm;
+            }
+            if(nStepMinusAsm==0){
+               nStepMinusAsm = 1;
+            }
+
         }
         utils.Config.nMemAddress = nDataShow;
         utils.Config.SaveConfig();
     }
-    
-    public void refreshDlg(){        
+
+    public void refreshDlg() {
         fillAsmCode();
         fillRegistry();
         fillFlags();
         fillStack();
         fillBps();
-        fillDataShow();  
+        fillDataShow();
     }
 
     public void showDialog() {
-        
+
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        if(pntPos.x<0){        
-         setLocation((screen.width - getSize().width) / 2, (screen.height - getSize().height) / 2);
-        }else{
-         setLocation(pntPos);  
-        }        
-        if(stpBP.bStatus){
-         //jedna se o step over
-         jRunButton.setIcon(icoRun);
-         jRunButton.setToolTipText("Run");
-         m.cpu.setBreakpoint(stpBP.nAdress, false);
-         stpBP.bStatus=false;
-         setBpoints();
-         jStepIntoButton.setEnabled(true);
-         jStepButton.setEnabled(true);
-         
+        if (pntPos.x < 0) {
+            setLocation((screen.width - getSize().width) / 2, (screen.height - getSize().height) / 2);
+        } else {
+            setLocation(pntPos);
+        }
+        if (stpBP.bStatus) {
+            //jedna se o step over
+            jRunButton.setIcon(icoRun);
+            jRunButton.setToolTipText("Run");
+            m.cpu.setBreakpoint(stpBP.nAdress, false);
+            stpBP.bStatus = false;
+            setBpoints();
+            jStepIntoButton.setEnabled(true);
+            jStepButton.setEnabled(true);
+
         }
         refreshDlg();
         setVisible(true);
@@ -470,10 +555,10 @@ public class Debugger extends javax.swing.JFrame {
     //najde nejvhodnejsi monospaced font pro zarovnane zobrazeni dat
     public Font selectMonospaceFont() {
         //seznam preferovanych fontu
-        String[] arrPreferedFonts = new String[] {"Monospaced","Courier New","Courier","DialogInput"};
+        String[] arrPreferedFonts = new String[]{"Monospaced", "Courier New", "Courier", "DialogInput"};
         Font fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
         List<Font> monoFonts = new ArrayList<Font>();
-        Font fntSelected=null;
+        Font fntSelected = null;
         FontRenderContext frc = new FontRenderContext(null, RenderingHints.VALUE_TEXT_ANTIALIAS_DEFAULT, RenderingHints.VALUE_FRACTIONALMETRICS_DEFAULT);
         for (Font font : fonts) {
             Rectangle2D iBounds = font.getStringBounds("i", frc);
@@ -495,24 +580,26 @@ public class Debugger extends javax.swing.JFrame {
                     monoFonts.add(font);
                 }
             }
-            if(fntSelected!=null) break;
+            if (fntSelected != null) {
+                break;
+            }
         }
         if (fntSelected == null) {
             //pokud nenajdu preferovany font, vezmu prvni monospace font v seznamu
             if (monoFonts.size() > 0) {
                 fntSelected = monoFonts.get(0);
-            }else{
-               //pokud v seznamu nic neni, necham system at zvoli sam
-               fntSelected= new Font("",Font.BOLD,12);
+            } else {
+                //pokud v seznamu nic neni, necham system at zvoli sam
+                fntSelected = new Font("", Font.BOLD, 12);
             }
         }
         return fntSelected;
     }
-    
-    /** This method is called from within the constructor to
-     * initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is
-     * always regenerated by the Form Editor.
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
      */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -847,19 +934,19 @@ public class Debugger extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jStepButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jStepButtonActionPerformed
-       // m.cpu.setBreakpoint(nNextInstr, true);
-        boolean bSaveSt=utils.Config.bBP6;
+        // m.cpu.setBreakpoint(nNextInstr, true);
+        boolean bSaveSt = utils.Config.bBP6;
         jStepButton.setEnabled(false);
-        if(m.cpu.bMemBP){
-           //zastaveni na memory breakpointu         
-           utils.Config.bBP6=false;
+        if (m.cpu.bMemBP) {
+            //zastaveni na memory breakpointu         
+            utils.Config.bBP6 = false;
         }
         m.cpu.executeOne();
         //m.genDispTables();        
         m.scr.repaint();
-        if(m.cpu.bMemBP){
-           //zastaveni na memory breakpointu
-           utils.Config.bBP6=bSaveSt;
+        if (m.cpu.bMemBP) {
+            //zastaveni na memory breakpointu
+            utils.Config.bBP6 = bSaveSt;
         }
         refreshDlg();
         jStepButton.setEnabled(true);
@@ -878,112 +965,112 @@ public class Debugger extends javax.swing.JFrame {
     }//GEN-LAST:event_jRunButtonActionPerformed
 
     private void jCheckBP1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBP1ActionPerformed
-      if(jCheckBP1.isSelected()){
-       nBP1=Integer.valueOf(jTextBP1.getText(),16);
-       //nastavit bp
-       m.cpu.setBreakpoint(nBP1, true);
-       bBP1Checked=true;
-      }else{
-        if(nBP1!=-1){
-         //odstranit bp
-          m.cpu.setBreakpoint(nBP1, false);
-          bBP1Checked=false;
+        if (jCheckBP1.isSelected()) {
+            nBP1 = Integer.valueOf(jTextBP1.getText(), 16);
+            //nastavit bp
+            m.cpu.setBreakpoint(nBP1, true);
+            bBP1Checked = true;
+        } else {
+            if (nBP1 != -1) {
+                //odstranit bp
+                m.cpu.setBreakpoint(nBP1, false);
+                bBP1Checked = false;
+            }
         }
-      }
-      fillBps();
+        fillBps();
     }//GEN-LAST:event_jCheckBP1ActionPerformed
 
     private void jCheckBP2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBP2ActionPerformed
-       if(jCheckBP2.isSelected()){
-       nBP2=Integer.valueOf(jTextBP2.getText(),16);
-       //nastavit bp
-       m.cpu.setBreakpoint(nBP2, true);
-       bBP2Checked=true;
-      }else{
-        if(nBP2!=-1){
-         //odstranit bp
-          m.cpu.setBreakpoint(nBP2, false);
-          bBP2Checked=false;
+        if (jCheckBP2.isSelected()) {
+            nBP2 = Integer.valueOf(jTextBP2.getText(), 16);
+            //nastavit bp
+            m.cpu.setBreakpoint(nBP2, true);
+            bBP2Checked = true;
+        } else {
+            if (nBP2 != -1) {
+                //odstranit bp
+                m.cpu.setBreakpoint(nBP2, false);
+                bBP2Checked = false;
+            }
         }
-      }
-       fillBps();
+        fillBps();
     }//GEN-LAST:event_jCheckBP2ActionPerformed
 
     private void jCheckBP3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBP3ActionPerformed
-     if(jCheckBP3.isSelected()){
-       nBP3=Integer.valueOf(jTextBP3.getText(),16);
-       //nastavit bp
-       m.cpu.setBreakpoint(nBP3, true);
-       bBP3Checked=true;
-      }else{
-        if(nBP3!=-1){
-         //odstranit bp
-          m.cpu.setBreakpoint(nBP3, false);
-          bBP3Checked=false;
+        if (jCheckBP3.isSelected()) {
+            nBP3 = Integer.valueOf(jTextBP3.getText(), 16);
+            //nastavit bp
+            m.cpu.setBreakpoint(nBP3, true);
+            bBP3Checked = true;
+        } else {
+            if (nBP3 != -1) {
+                //odstranit bp
+                m.cpu.setBreakpoint(nBP3, false);
+                bBP3Checked = false;
+            }
         }
-      }
-     fillBps();
+        fillBps();
     }//GEN-LAST:event_jCheckBP3ActionPerformed
 
     private void jCheckBP4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBP4ActionPerformed
-       if(jCheckBP4.isSelected()){
-       nBP4=Integer.valueOf(jTextBP4.getText(),16);
-       //nastavit bp
-       m.cpu.setBreakpoint(nBP4, true);
-       bBP4Checked=true;
-      }else{
-        if(nBP4!=-1){
-         //odstranit bp
-          m.cpu.setBreakpoint(nBP4, false);
-          bBP4Checked=false;
+        if (jCheckBP4.isSelected()) {
+            nBP4 = Integer.valueOf(jTextBP4.getText(), 16);
+            //nastavit bp
+            m.cpu.setBreakpoint(nBP4, true);
+            bBP4Checked = true;
+        } else {
+            if (nBP4 != -1) {
+                //odstranit bp
+                m.cpu.setBreakpoint(nBP4, false);
+                bBP4Checked = false;
+            }
         }
-      }
-       fillBps();
+        fillBps();
     }//GEN-LAST:event_jCheckBP4ActionPerformed
 
     private void jCheckBP5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBP5ActionPerformed
-      if(jCheckBP5.isSelected()){
-       nBP5=Integer.valueOf(jTextBP5.getText(),16);
-       //nastavit bp
-       m.cpu.setBreakpoint(nBP5, true);
-       bBP5Checked=true;
-      }else{
-        if(nBP5!=-1){
-         //odstranit bp
-          m.cpu.setBreakpoint(nBP5, false);
-          bBP5Checked=false;
+        if (jCheckBP5.isSelected()) {
+            nBP5 = Integer.valueOf(jTextBP5.getText(), 16);
+            //nastavit bp
+            m.cpu.setBreakpoint(nBP5, true);
+            bBP5Checked = true;
+        } else {
+            if (nBP5 != -1) {
+                //odstranit bp
+                m.cpu.setBreakpoint(nBP5, false);
+                bBP5Checked = false;
+            }
         }
-      }
-      fillBps();
+        fillBps();
     }//GEN-LAST:event_jCheckBP5ActionPerformed
 
     private void jTextAdrFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextAdrFocusLost
-      nDataShow=Integer.valueOf(jTextAdr.getText(),16);
-       fillDataShow();
+        nDataShow = Integer.valueOf(jTextAdr.getText(), 16);
+        fillDataShow();
     }//GEN-LAST:event_jTextAdrFocusLost
 
     private void jLabelTStatesMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabelTStatesMouseClicked
-     Date date= new Date();
-     long nNow=date.getTime();
-     long nRozdil=(nNow-nLastClick);
-     if((nRozdil>100)&&(nRozdil<500)){
-       //double click
-       m.cpu.clock.setTstates(0);
-       fillRegistry();
-       nLastClick=0;
-     }else{
-       nLastClick=nNow;  
-     } 
+        Date date = new Date();
+        long nNow = date.getTime();
+        long nRozdil = (nNow - nLastClick);
+        if ((nRozdil > 100) && (nRozdil < 500)) {
+            //double click
+            m.cpu.clock.setTstates(0);
+            fillRegistry();
+            nLastClick = 0;
+        } else {
+            nLastClick = nNow;
+        }
     }//GEN-LAST:event_jLabelTStatesMouseClicked
 
     private void jTextBP1FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBP1FocusLost
         int nNewAdr = Integer.valueOf(jTextBP1.getText(), 16);
         if (nNewAdr != nBP1) {
-            if(bBP1Checked){
+            if (bBP1Checked) {
                 m.cpu.setBreakpoint(nBP1, false);
             }
             nBP1 = nNewAdr;
-            if(bBP1Checked){
+            if (bBP1Checked) {
                 m.cpu.setBreakpoint(nBP1, true);
             }
         }
@@ -993,11 +1080,11 @@ public class Debugger extends javax.swing.JFrame {
     private void jTextBP2FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBP2FocusLost
         int nNewAdr = Integer.valueOf(jTextBP2.getText(), 16);
         if (nNewAdr != nBP2) {
-            if(bBP2Checked){
+            if (bBP2Checked) {
                 m.cpu.setBreakpoint(nBP2, false);
             }
             nBP2 = nNewAdr;
-            if(bBP2Checked){
+            if (bBP2Checked) {
                 m.cpu.setBreakpoint(nBP2, true);
             }
         }
@@ -1007,11 +1094,11 @@ public class Debugger extends javax.swing.JFrame {
     private void jTextBP3FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBP3FocusLost
         int nNewAdr = Integer.valueOf(jTextBP3.getText(), 16);
         if (nNewAdr != nBP3) {
-            if(bBP3Checked){
+            if (bBP3Checked) {
                 m.cpu.setBreakpoint(nBP3, false);
             }
             nBP3 = nNewAdr;
-            if(bBP3Checked){
+            if (bBP3Checked) {
                 m.cpu.setBreakpoint(nBP3, true);
             }
         }
@@ -1021,11 +1108,11 @@ public class Debugger extends javax.swing.JFrame {
     private void jTextBP4FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBP4FocusLost
         int nNewAdr = Integer.valueOf(jTextBP4.getText(), 16);
         if (nNewAdr != nBP4) {
-            if(bBP4Checked){
+            if (bBP4Checked) {
                 m.cpu.setBreakpoint(nBP4, false);
             }
             nBP4 = nNewAdr;
-            if(bBP4Checked){
+            if (bBP4Checked) {
                 m.cpu.setBreakpoint(nBP4, true);
             }
         }
@@ -1035,11 +1122,11 @@ public class Debugger extends javax.swing.JFrame {
     private void jTextBP5FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBP5FocusLost
         int nNewAdr = Integer.valueOf(jTextBP5.getText(), 16);
         if (nNewAdr != nBP5) {
-            if(bBP5Checked){
+            if (bBP5Checked) {
                 m.cpu.setBreakpoint(nBP5, false);
             }
             nBP5 = nNewAdr;
-            if(bBP5Checked){
+            if (bBP5Checked) {
                 m.cpu.setBreakpoint(nBP5, true);
             }
         }
@@ -1047,89 +1134,92 @@ public class Debugger extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextBP5FocusLost
 
     private void jTextAsmCodeMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextAsmCodeMouseClicked
-      Date date= new Date();
-     long nNow=date.getTime();
-     long nRozdil=(nNow-nLastClickAsm);
-     if((nRozdil>100)&&(nRozdil<500)){
-       //double click
-       if (jTextAsmCode.getSelectedText() != null) {
-        String strSelected= jTextAsmCode.getSelectedText();
-        if(strSelected.startsWith("#")){
-          strSelected=strSelected.substring(1);  
+        Date date = new Date();
+        long nNow = date.getTime();
+        long nRozdil = (nNow - nLastClickAsm);
+        if ((nRozdil > 100) && (nRozdil < 500)) {
+            //double click
+            if (jTextAsmCode.getSelectedText() != null) {
+                String strSelected = jTextAsmCode.getSelectedText();
+                if (strSelected.startsWith("#")) {
+                    strSelected = strSelected.substring(1);
+                }
+                int nBpAdress = -1;
+                try {
+                    nBpAdress = Integer.valueOf(strSelected, 16);
+                } catch (java.lang.NumberFormatException e) {
+
+                }
+                if ((nBpAdress >= 0) && (nBpAdress <= 65535)) {
+                    boolean bOK = false;
+                    if (!bBP1Checked) {
+                        nBP1 = nBpAdress;
+                        bBP1Checked = true;
+                        m.cpu.setBreakpoint(nBP1, true);
+                        fillBps();
+                        bOK = true;
+                    }
+                    if ((!bBP2Checked) && (!bOK)) {
+                        nBP2 = nBpAdress;
+                        bBP2Checked = true;
+                        m.cpu.setBreakpoint(nBP2, true);
+                        fillBps();
+                        bOK = true;
+                    }
+                    if ((!bBP3Checked) && (!bOK)) {
+                        nBP3 = nBpAdress;
+                        bBP3Checked = true;
+                        m.cpu.setBreakpoint(nBP3, true);
+                        fillBps();
+                        bOK = true;
+                    }
+                    if ((!bBP4Checked) && (!bOK)) {
+                        nBP4 = nBpAdress;
+                        bBP4Checked = true;
+                        m.cpu.setBreakpoint(nBP4, true);
+                        fillBps();
+                        bOK = true;
+                    }
+                    if ((!bBP5Checked) && (!bOK)) {
+                        nBP5 = nBpAdress;
+                        bBP5Checked = true;
+                        m.cpu.setBreakpoint(nBP5, true);
+                        fillBps();
+                        bOK = true;
+                    }
+                    if (!bOK) {
+                        //vsechny BP jsou obsazeny, vyberu hned prvni
+                        m.cpu.setBreakpoint(nBP1, false);
+                        nBP1 = nBpAdress;
+                        m.cpu.setBreakpoint(nBP1, true);
+                        fillBps();
+                    }
+                }
+            }
+            nLastClickAsm = 0;
+        } else {
+            nLastClickAsm = nNow;
         }
-        int nBpAdress=-1;
-        try{
-            nBpAdress=Integer.valueOf(strSelected,16);
-        }catch(java.lang.NumberFormatException e){
-            
-        }
-         if((nBpAdress>=0)&&(nBpAdress<=65535)){
-                 boolean bOK = false;
-                 if (!bBP1Checked) {
-                     nBP1 = nBpAdress;
-                     bBP1Checked=true;
-                     m.cpu.setBreakpoint(nBP1, true);
-                     fillBps();
-                     bOK=true;
-                 }
-                 if ((!bBP2Checked)&&(!bOK)) {
-                     nBP2 = nBpAdress;
-                     bBP2Checked=true;
-                     m.cpu.setBreakpoint(nBP2, true);
-                     fillBps();
-                     bOK=true;
-                 }
-                 if ((!bBP3Checked)&&(!bOK)) {
-                     nBP3 = nBpAdress;
-                     bBP3Checked=true;
-                     m.cpu.setBreakpoint(nBP3, true);
-                     fillBps();
-                     bOK=true;
-                 }
-                 if ((!bBP4Checked)&&(!bOK)) {
-                     nBP4 = nBpAdress;
-                     bBP4Checked=true;
-                     m.cpu.setBreakpoint(nBP4, true);
-                     fillBps();
-                     bOK=true;
-                 }
-                 if ((!bBP5Checked)&&(!bOK)) {
-                     nBP5 = nBpAdress;
-                     bBP5Checked=true;
-                     m.cpu.setBreakpoint(nBP5, true);
-                     fillBps();
-                     bOK=true;
-                 }
-                 if(!bOK){
-                     //vsechny BP jsou obsazeny, vyberu hned prvni
-                     m.cpu.setBreakpoint(nBP1, false);
-                     nBP1 = nBpAdress;
-                     m.cpu.setBreakpoint(nBP1, true);
-                     fillBps();
-                 }
-             }
-         }
-       nLastClickAsm=0;
-     }else{
-       nLastClickAsm=nNow;  
-     } 
     }//GEN-LAST:event_jTextAsmCodeMouseClicked
 
     private void jStepIntoButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jStepIntoButtonActionPerformed
-        m.cpu.setBreakpoint(m.cpu.getRegPC(),false);//vypnu pripadny breakpoint na aktualni adrese, jinak bych se nikam nepohnul
+        m.cpu.setBreakpoint(m.cpu.getRegPC(), false);//vypnu pripadny breakpoint na aktualni adrese, jinak bych se nikam nepohnul
         m.cpu.setBreakpoint(stpBP.nAdress, true);
-        stpBP.bStatus=true;
+        stpBP.bStatus = true;
         //JOptionPane.showMessageDialog(null, String.format("%04X",nNextInstr));
-        if(m.cpu.bMemBP){
-           //zastaveni na memory breakpointu
-           boolean bSaveSt=utils.Config.bBP6;
-           utils.Config.bBP6=false;
-           m.cpu.executeOne();
-           utils.Config.bBP6=true;
-           utils.Config.bBP6=bSaveSt;
+        if(m.melodik.isEnabled()){
+            m.melodik.initChip();
+        }
+        if (m.cpu.bMemBP) {
+            //zastaveni na memory breakpointu
+            boolean bSaveSt = utils.Config.bBP6;
+            utils.Config.bBP6 = false;
+            m.cpu.executeOne();
+            utils.Config.bBP6 = true;
+            utils.Config.bBP6 = bSaveSt;
         }
         m.startEmulation();
-        pntPos=getLocation();
+        pntPos = getLocation();
         jStepIntoButton.setEnabled(false);
         jStepButton.setEnabled(false);
         jRunButton.setIcon(icoStop);
@@ -1138,25 +1228,25 @@ public class Debugger extends javax.swing.JFrame {
     }//GEN-LAST:event_jStepIntoButtonActionPerformed
 
     private void jRadioCodeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioCodeActionPerformed
-       utils.Config.bShowCode=true;
-       utils.Config.SaveConfig();
-       refreshDlg();
+        utils.Config.bShowCode = true;
+        utils.Config.SaveConfig();
+        refreshDlg();
     }//GEN-LAST:event_jRadioCodeActionPerformed
 
     private void jRadioAssemblerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioAssemblerActionPerformed
-       utils.Config.bShowCode=false;
-       utils.Config.SaveConfig();
-       refreshDlg();
+        utils.Config.bShowCode = false;
+        utils.Config.SaveConfig();
+        refreshDlg();
     }//GEN-LAST:event_jRadioAssemblerActionPerformed
 
     private void jCheckBP6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBP6ActionPerformed
-       if(jCheckBP6.isSelected()){
-       bBP6Checked=true;
-      }else{
-          bBP6Checked=false;
-        
-      }
-      fillBps();
+        if (jCheckBP6.isSelected()) {
+            bBP6Checked = true;
+        } else {
+            bBP6Checked = false;
+
+        }
+        fillBps();
     }//GEN-LAST:event_jCheckBP6ActionPerformed
 
     private void jTextBP6FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextBP6FocusLost
@@ -1172,24 +1262,24 @@ public class Debugger extends javax.swing.JFrame {
         Date date = new Date();
         long nNow = date.getTime();
         long nRozdil = (nNow - nLastClickText);
-        if ((nRozdil > 100) && (nRozdil < 500)) {            
+        if ((nRozdil > 100) && (nRozdil < 500)) {
             if (utils.Config.bShowCode) {
                 boolean bIsInArea = false;
                 int nMemAdr = Integer.valueOf(jTextAdr.getText(), 16);
                 int nTxtPos = jTextData.getCaretPosition();
                 for (int i = 8; i <= 288; i += 43) {
-                    if ((nTxtPos >= i) && (nTxtPos <= (i + 22))) {                        
+                    if ((nTxtPos >= i) && (nTxtPos <= (i + 22))) {
                         int nModulo = (nTxtPos - i + 1) % 3;
                         if (nModulo != 0) {
-                            nByteAddress=nMemAdr+(nTxtPos - i + 1)/3;
+                            nByteAddress = nMemAdr + (nTxtPos - i + 1) / 3;
                             if (nByteAddress > 65535) {
-                                nByteAddress =  nByteAddress - 65536;
+                                nByteAddress = nByteAddress - 65536;
                             }
                             bIsInArea = true;
                             break;
                         }
                     }
-                    nMemAdr+=8;
+                    nMemAdr += 8;
                 }
 
                 if (bIsInArea) {
@@ -1203,7 +1293,7 @@ public class Debugger extends javax.swing.JFrame {
                             setCaretPosition(0);
                         }
                     };
-            
+
                     txtByte.setNumberOfDigits(2);
                     txtByte.setFont(fntDefaultMonospace);
                     txtByte.setText(jTextData.getText().substring(nTxtPos - 2, nTxtPos));
@@ -1211,7 +1301,7 @@ public class Debugger extends javax.swing.JFrame {
                         public void focusLost(java.awt.event.FocusEvent evt) {
                             if (txtByte != null) {
                                 if (txtByte.getSaveNeeded()) {
-                                    byte nNewByte = (byte)(Integer.valueOf(txtByte.getText(), 16) & 0xff);
+                                    byte nNewByte = (byte) (Integer.valueOf(txtByte.getText(), 16) & 0xff);
                                     if (nByteAddress != null) {
                                         m.mem.writeByte(nByteAddress, nNewByte);
                                         nByteAddress = null;
@@ -1224,25 +1314,24 @@ public class Debugger extends javax.swing.JFrame {
                         }
                     });
 
-                   
-                    Rectangle2D rectangle=null;
-                    int x1=0;
-                    int x2=0;
-                    int y1=0;
-                    int y2=0;
+                    Rectangle2D rectangle = null;
+                    int x1 = 0;
+                    int x2 = 0;
+                    int y1 = 0;
+                    int y2 = 0;
                     try {
                         rectangle = jTextData.modelToView(nTxtPos);
-                        x2=(int)(rectangle.getMinX()+0.5);
-                        rectangle = jTextData.modelToView(nTxtPos-2);
-                        x1=(int)(rectangle.getMinX()-0.5);
-                        y1=(int)(rectangle.getMinY());
-                        y2=(int)(rectangle.getMaxY());
-                                } catch (BadLocationException ex) {
+                        x2 = (int) (rectangle.getMinX() + 0.5);
+                        rectangle = jTextData.modelToView(nTxtPos - 2);
+                        x1 = (int) (rectangle.getMinX() - 0.5);
+                        y1 = (int) (rectangle.getMinY());
+                        y2 = (int) (rectangle.getMaxY());
+                    } catch (BadLocationException ex) {
                     }
                     if (rectangle != null) {
                         jTextData.add(txtByte);
-                        txtByte.setSize(x2-x1+12, y2-y1+8);
-                        txtByte.setLocation(x1-6,y1-4);
+                        txtByte.setSize(x2 - x1 + 12, y2 - y1 + 8);
+                        txtByte.setLocation(x1 - 6, y1 - 4);
                         txtByte.requestFocus();
                     }
                 }
@@ -1254,7 +1343,6 @@ public class Debugger extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextDataMouseClicked
 
 
-    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox jCheckBP1;
     private javax.swing.JCheckBox jCheckBP2;

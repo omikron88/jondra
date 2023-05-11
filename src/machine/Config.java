@@ -28,6 +28,7 @@ public class Config {
     private String RomB = "";
     
     private boolean bAudio=true;
+    private boolean bMelodik=true;
     
      public boolean getAudio() {
         return bAudio;
@@ -37,6 +38,13 @@ public class Config {
         bAudio=bInAudio;
     }
 
+      public boolean getMelodik() {
+        return bMelodik;
+    }
+    
+    public void setMelodik(boolean bInMel) {
+        bMelodik=bInMel;
+    }
             
     public void setRomType(byte b) {
         if (b!=Rom) {
