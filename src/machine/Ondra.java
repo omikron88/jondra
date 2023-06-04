@@ -248,6 +248,7 @@ public class Ondra extends Thread
 
     public void genDispTables() {
         Arrays.fill(dispAdr, -1);
+        Arrays.fill(px, (byte)0);
         int nSkew = 255 - nRozliseni;
         int adr = 0;
         int vm;
@@ -338,7 +339,7 @@ public class Ondra extends Thread
         int x = dispAdr[address - 0xd800];
         if (x != -1 && dmaEnabled) {
             px[x] = (byte) data;
-//            scr.repaint(x % 40, x / 40, 8, 1);
+        //    scr.repaint(x % 40, x / 40, 8, 1);
         }
     }
 
@@ -422,8 +423,8 @@ public class Ondra extends Thread
     public int inPort(int port) {
         clk.addTstates(4);
 //detekce zmeny rozliseni
-        int nC = cpu.getRegC();
-        if (cpu.getRegB() == 0x40) {
+        if ((portA3 & 0x30) == 0x00) {
+            int nC = port & 0xff;
             int nCarry = nC & 128;
             if (nCarry > 0) {
                 nCarry = 1;
