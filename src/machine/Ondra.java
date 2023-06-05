@@ -481,7 +481,7 @@ public class Ondra extends Thread
 
         }
         if ((port & 0x01) == 0) {
-            if (snd.isEnabled()) {
+            if (snd.isEnabled()) {                
                 snd.fillBuffer.fillWithSample(((value & 224) >>> 5), clk.getTstates());
             }
             portA0 = (byte) value;
@@ -512,9 +512,7 @@ public class Ondra extends Thread
             //pokud je strobe na high, tak zapis na Melodik
             if ((portA0 & 0x8) != 0) {
                 if (melodik.isEnabled()) {
-                    //System.out.println("Melodik-"+value);
                     melodik.sndChip.write(value);
-                    //melodik.updateSound(clk.getTstates());
                 }
             }
         }
