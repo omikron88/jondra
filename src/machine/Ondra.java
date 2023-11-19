@@ -481,10 +481,10 @@ public class Ondra extends Thread
 
         }
         if ((port & 0x01) == 0) {
+            portA0 = (byte) value;
             if (snd.isEnabled()) {                
                 snd.fillBuffer.fillWithSample(((value & 224) >>> 5), clk.getTstates());
-            }
-            portA0 = (byte) value;
+            }            
             if ((portA0 & 0x01) == 0) {
                 GreenLed.setEnabled(true);
             } else {
@@ -509,6 +509,7 @@ public class Ondra extends Thread
         }
         //printer port
         if ((port & 0x02) == 0) {
+            portA1 = (byte) value;
             //pokud je strobe na high, tak zapis na Melodik
             if ((portA0 & 0x8) != 0) {
                 if (melodik.isEnabled()) {

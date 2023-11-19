@@ -11,6 +11,7 @@
 package gui;
 
 import disassemblers.Z80Dis;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
@@ -27,12 +28,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 import javax.swing.JScrollPane;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
 import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.Highlighter;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 import machine.Ondra;
 import utils.JNumberTextField;
 import z80core.Z80.IntMode;
@@ -195,7 +201,7 @@ public class Debugger extends javax.swing.JFrame {
         Z80Dis disassembler = new Z80Dis();
         Z80Dis.Opcodes = new int[65536];
         int memPtr = m.cpu.getRegPC();
-        for (int j = 0; j < 10; j++) {
+        for (int j = 0; j < 13; j++) {
             int memPtrTmp = memPtr;
             for (int i = memPtr; i < memPtr + 5; i++) {
                 Z80Dis.Opcodes[i] = (0xff) & (byte) m.mem.readByte(memPtrTmp);
@@ -293,6 +299,7 @@ public class Debugger extends javax.swing.JFrame {
 
     public void fillStack() {
         jTextStack.setText("");
+        StyledDocument doc = jTextStack.getStyledDocument();
         int nSPAdr = m.cpu.getRegSP();
         for (int i = nSPAdr; i < nSPAdr + 10; i += 2) {
             int i1 = i;
@@ -303,15 +310,36 @@ public class Debugger extends javax.swing.JFrame {
             if (i2 > 65535) {
                 i2 = i2 - 65535;
             }
-            String strLine = String.format("#%04X #%04X\n", i1, 256 * ((0xff) & (byte) m.mem.readByte(i2)) + ((0xff) & (byte) m.mem.readByte(i1)));
-            jTextStack.append(strLine);
+            String strLine = String.format("#%04X #%04X\n", i1, 256 * ((0xff) & (byte) m.mem.readByte(i2)) + ((0xff) & (byte) m.mem.readByte(i1)));            
+            try {
+                doc.insertString(doc.getLength(), strLine, null );                
+            } catch (BadLocationException ex) {                
+            }
         }
+        SimpleAttributeSet grayText = new SimpleAttributeSet();
+        StyleConstants.setForeground(grayText, new Color(215,215,215)); 
 
-        jTextStack.append("\n\n");
-        String strA0 = String.format("port FE:#%02X\n", m.portA0);
-        jTextStack.append(strA0);
-        String strA3 = String.format("port F7:#%02X\n", m.portA3);
-        jTextStack.append(strA3);
+        
+        try {
+            doc.insertString(doc.getLength(), "\n", null);
+            String strA3 = String.format("Port03(F7h):#%02X\n", m.portA3);
+            doc.insertString(doc.getLength(), strA3, null);
+            int nPortValue=(0xff) & (byte)m.portA3;         
+            doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
+            doc.insertString(doc.getLength(), String.format("%8s\n", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
+            String strA1 = String.format("Port09(FDh):#%02X\n", m.portA1);
+            doc.insertString(doc.getLength(), strA1, null);
+            nPortValue=(0xff) & (byte)m.portA1;
+            doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
+            doc.insertString(doc.getLength(), String.format("%8s\n", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
+            String strA0 = String.format("Port10(FEh):#%02X\n", m.portA0);
+            doc.insertString(doc.getLength(), strA0, null);
+            nPortValue=(0xff) & (byte)m.portA0;
+            doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
+            doc.insertString(doc.getLength(), String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);                 
+        } catch (BadLocationException ex) {
+        }
+    
     }
 
     public void fillBps() {
@@ -404,7 +432,7 @@ public class Debugger extends javax.swing.JFrame {
             Z80Dis disassembler = new Z80Dis();
             Z80Dis.Opcodes = new int[65600];
             int memPtr = nMemAdr;
-            for (int j = 0; j < 7; j++) {
+            for (int j = 0; j < 8; j++) {
                 int memPtrTmp = memPtr;
                 for (int i = memPtr; i < memPtr + 5; i++) {
                     Z80Dis.Opcodes[i] = (0xff) & (byte) m.mem.readByte(memPtrTmp);
@@ -606,6 +634,8 @@ public class Debugger extends javax.swing.JFrame {
     private void initComponents() {
 
         jTextField1 = new javax.swing.JTextField();
+        jScrollPane6 = new javax.swing.JScrollPane();
+        jTextArea1 = new javax.swing.JTextArea();
         jRunButton = new javax.swing.JButton();
         jStepButton = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -614,8 +644,6 @@ public class Debugger extends javax.swing.JFrame {
         jTextRegistry = new javax.swing.JTextArea();
         jScrollPane3 = new javax.swing.JScrollPane();
         jTextFlags = new javax.swing.JTextArea();
-        jScrollPane4 = new javax.swing.JScrollPane();
-        jTextStack = new javax.swing.JTextArea();
         jCheckBP1 = new javax.swing.JCheckBox();
         jScrollPane5 = new javax.swing.JScrollPane();
         jTextData = new javax.swing.JTextArea();
@@ -636,11 +664,18 @@ public class Debugger extends javax.swing.JFrame {
         jCheckBP6 = new javax.swing.JCheckBox();
         jTextBP6 = new utils.JNumberTextField();
         jLabel1 = new javax.swing.JLabel();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        jTextStack = new javax.swing.JTextPane();
 
         jTextField1.setText("jTextField1");
 
+        jTextArea1.setColumns(20);
+        jTextArea1.setRows(5);
+        jScrollPane6.setViewportView(jTextArea1);
+
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Debugger");
+        setPreferredSize(new java.awt.Dimension(700, 555));
         setResizable(false);
 
         jRunButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/rundbg.png"))); // NOI18N
@@ -663,6 +698,7 @@ public class Debugger extends javax.swing.JFrame {
         jTextAsmCode.setColumns(20);
         jTextAsmCode.setFont(new java.awt.Font("Courier New", 1, 12)); // NOI18N
         jTextAsmCode.setRows(6);
+        jTextAsmCode.setPreferredSize(new java.awt.Dimension(144, 80));
         jTextAsmCode.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 jTextAsmCodeMouseClicked(evt);
@@ -675,6 +711,7 @@ public class Debugger extends javax.swing.JFrame {
         jTextRegistry.setFont(new java.awt.Font("Courier New", 1, 12)); // NOI18N
         jTextRegistry.setRows(5);
         jTextRegistry.setAutoscrolls(false);
+        jTextRegistry.setPreferredSize(new java.awt.Dimension(144, 80));
         jScrollPane2.setViewportView(jTextRegistry);
 
         jScrollPane3.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -684,13 +721,8 @@ public class Debugger extends javax.swing.JFrame {
         jTextFlags.setFont(new java.awt.Font("Courier New", 1, 12)); // NOI18N
         jTextFlags.setRows(5);
         jTextFlags.setAutoscrolls(false);
+        jTextFlags.setPreferredSize(new java.awt.Dimension(144, 80));
         jScrollPane3.setViewportView(jTextFlags);
-
-        jTextStack.setEditable(false);
-        jTextStack.setColumns(20);
-        jTextStack.setFont(new java.awt.Font("Courier New", 1, 12)); // NOI18N
-        jTextStack.setRows(5);
-        jScrollPane4.setViewportView(jTextStack);
 
         jCheckBP1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -820,6 +852,10 @@ public class Debugger extends javax.swing.JFrame {
 
         jLabel1.setText("Mem Write Breakpoint");
 
+        jTextStack.setEditable(false);
+        jTextStack.setPreferredSize(new java.awt.Dimension(144, 80));
+        jScrollPane4.setViewportView(jTextStack);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -871,32 +907,32 @@ public class Debugger extends javax.swing.JFrame {
                                 .addComponent(jStepIntoButton, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jRunButton, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jTextAdr, javax.swing.GroupLayout.PREFERRED_SIZE, 53, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 271, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(10, 10, 10)
                                 .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jTextAdr, javax.swing.GroupLayout.PREFERRED_SIZE, 53, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(0, 50, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jRunButton, javax.swing.GroupLayout.DEFAULT_SIZE, 43, Short.MAX_VALUE)
-                    .addComponent(jStepIntoButton, javax.swing.GroupLayout.DEFAULT_SIZE, 43, Short.MAX_VALUE)
-                    .addComponent(jStepButton, javax.swing.GroupLayout.DEFAULT_SIZE, 43, Short.MAX_VALUE))
-                .addGap(8, 8, 8)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 173, Short.MAX_VALUE)
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 173, Short.MAX_VALUE)
-                    .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 173, Short.MAX_VALUE)
-                    .addComponent(jScrollPane1))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addComponent(jStepIntoButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 41, Short.MAX_VALUE)
+                    .addComponent(jStepButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jRunButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 195, Short.MAX_VALUE)
+                    .addComponent(jScrollPane4)
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jCheckBP1)
@@ -929,6 +965,8 @@ public class Debugger extends javax.swing.JFrame {
                         .addComponent(jRadioAssembler)))
                 .addContainerGap())
         );
+
+        jScrollPane4.getAccessibleContext().setAccessibleParent(jScrollPane3);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -1360,9 +1398,11 @@ public class Debugger extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JScrollPane jScrollPane5;
+    private javax.swing.JScrollPane jScrollPane6;
     private javax.swing.JButton jStepButton;
     private javax.swing.JButton jStepIntoButton;
     private utils.JNumberTextField jTextAdr;
+    private javax.swing.JTextArea jTextArea1;
     private javax.swing.JTextArea jTextAsmCode;
     private utils.JNumberTextField jTextBP1;
     private utils.JNumberTextField jTextBP2;
@@ -1374,6 +1414,6 @@ public class Debugger extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextArea jTextFlags;
     private javax.swing.JTextArea jTextRegistry;
-    private javax.swing.JTextArea jTextStack;
+    private javax.swing.JTextPane jTextStack;
     // End of variables declaration//GEN-END:variables
 }

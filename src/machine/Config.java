@@ -21,14 +21,15 @@ public class Config {
     private String  VILI_a  = "Ondra_ViLi_v27_a.rom";
     private String  VILI_b  = "Ondra_ViLi_v27_b.rom";
 
-    private byte Rom = VILI; 
+    private byte Rom = (byte)utils.Config.nRomType; 
     
     private String RomDir = "roms/";
-    private String RomA = "";
-    private String RomB = "";
+    private String RomA = utils.Config.strRomAFilePath;
+    private String RomB = utils.Config.strRomBFilePath; 
     
     private boolean bAudio=true;
     private boolean bMelodik=true;
+    
     
      public boolean getAudio() {
         return bAudio;

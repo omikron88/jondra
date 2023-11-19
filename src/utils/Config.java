@@ -51,6 +51,10 @@ public class Config {
     public static String strTapFilePath = "";
     public static String strSnapFilePath = "";
     public static String strShotFilePath = "";
+    
+    public static String strRomAFilePath = "";
+    public static String strRomBFilePath = "";
+    public static int nRomType = 0;
 
     public static String getMyPath() {
         String retVal = "";
@@ -94,6 +98,10 @@ public class Config {
         prop.setProperty("TAPFILEPATH", strTapFilePath);
         prop.setProperty("SNAFILEPATH", strSnapFilePath);
         prop.setProperty("SHOTFILEPATH", strShotFilePath);
+        
+        prop.setProperty("ROMAFILEPATH", strRomAFilePath);
+        prop.setProperty("ROMBFILEPATH", strRomBFilePath);
+        prop.setProperty("ROMTYPE", String.valueOf(nRomType));        
 
         String fileName = getMyPath() + "JOndra.config";
         OutputStream os;
@@ -188,7 +196,9 @@ public class Config {
         strSnapFilePath = nullToEmpty(prop.getProperty("SNAFILEPATH"));
         strShotFilePath = nullToEmpty(prop.getProperty("SHOTFILEPATH"));
         nSaveFromAddress = parseIntSafe(prop.getProperty("BINSAVEADDRESSFROM"), 0);
-        nSaveToAddress = parseIntSafe(prop.getProperty("BINSAVEADDRESSTO"), 0);
-
+        nSaveToAddress = parseIntSafe(prop.getProperty("BINSAVEADDRESSTO"), 0);        
+        strRomAFilePath = nullToEmpty(prop.getProperty("ROMAFILEPATH"));
+        strRomBFilePath = nullToEmpty(prop.getProperty("ROMBFILEPATH")); 
+        nRomType = parseIntSafe(prop.getProperty("ROMTYPE"),2);         
     }
 }

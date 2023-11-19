@@ -300,6 +300,8 @@ public class Settings extends javax.swing.JDialog {
     }//GEN-LAST:event_bCustomActionPerformed
 
     private void bOkActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bOkActionPerformed
+        utils.Config.nRomType=cf.getRomType();
+        utils.Config.SaveConfig();
         setVisible(false);
         setModal(false);
     }//GEN-LAST:event_bOkActionPerformed
@@ -322,6 +324,8 @@ public class Settings extends javax.swing.JDialog {
             try {
                 tRomA.setText(fc.getSelectedFile().getCanonicalPath());
                 cf.setRomA(fc.getSelectedFile().getCanonicalPath());
+                utils.Config.strRomAFilePath=cf.getRomA();
+                utils.Config.SaveConfig();
                 ResetNeeded = true;
             } catch (IOException ex) {
                 Logger.getLogger(Settings.class.getName()).log(Level.SEVERE, null, ex);
@@ -337,6 +341,8 @@ public class Settings extends javax.swing.JDialog {
             try {
                 tRomB.setText(fc.getSelectedFile().getCanonicalPath());
                 cf.setRomB(fc.getSelectedFile().getCanonicalPath());
+                utils.Config.strRomBFilePath=cf.getRomB();
+                utils.Config.SaveConfig();
                 ResetNeeded = true;
             } catch (IOException ex) {
                 Logger.getLogger(Settings.class.getName()).log(Level.SEVERE, null, ex);

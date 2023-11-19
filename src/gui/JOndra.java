@@ -58,6 +58,7 @@ public class JOndra extends javax.swing.JFrame {
             strHomeDirectory = strHomeDirectory.substring(0, pos);
         }
         strArgument = strArg;
+        Config.LoadConfig();
         initComponents();
         setIconImage((new ImageIcon(getClass().getResource("/icons/ondra.png")).getImage()));
         //presun polozky menu About doprava
