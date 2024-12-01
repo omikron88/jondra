@@ -9,46 +9,64 @@ package machine;
  * @author Administrator
  */
 public class Config {
+
     public final byte BASIC = 0;
     public final byte TESLA = 1;
-    public final byte VILI  = 2;
-    public final byte CUSTOM  = 3;
-   
-    private String  BASIC_a = "Ondra_BASICEXP_V5_a.rom";
-    private String  BASIC_b = "Ondra_BASICEXP_V5_b.rom";
-    private String  TESLA_a = "Ondra_TESLA_V5_a.rom";
-    private String  TESLA_b = "Ondra_TESLA_V5_b.rom";
-    private String  VILI_a  = "Ondra_ViLi_v27_a.rom";
-    private String  VILI_b  = "Ondra_ViLi_v27_b.rom";
+    public final byte VILI = 2;
+    public final byte CUSTOM = 3;
 
-    private byte Rom = (byte)utils.Config.nRomType; 
-    
+    private String BASIC_a = "Ondra_BASICEXP_V5_a.rom";
+    private String BASIC_b = "Ondra_BASICEXP_V5_b.rom";
+    private String TESLA_a = "Ondra_TESLA_V5_a.rom";
+    private String TESLA_b = "Ondra_TESLA_V5_b.rom";
+    private String VILI_a = "Ondra_ViLi_v27_a.rom";
+    private String VILI_b = "Ondra_ViLi_v27_b.rom";
+
+    private byte Rom = (byte) utils.Config.nRomType;
+
     private String RomDir = "roms/";
     private String RomA = utils.Config.strRomAFilePath;
-    private String RomB = utils.Config.strRomBFilePath; 
-    
-    private boolean bAudio=true;
-    private boolean bMelodik=true;
-    
-    
-     public boolean getAudio() {
+    private String RomB = utils.Config.strRomBFilePath;
+
+    private boolean bAudio = true;
+    private boolean bMelodik = true;
+    private boolean bFullscreen = false;
+    private boolean bScanlines = false;
+
+    public boolean getAudio() {
         return bAudio;
     }
-    
+
     public void setAudio(boolean bInAudio) {
-        bAudio=bInAudio;
+        bAudio = bInAudio;
     }
 
-      public boolean getMelodik() {
+    public boolean getMelodik() {
         return bMelodik;
     }
-    
+
     public void setMelodik(boolean bInMel) {
-        bMelodik=bInMel;
+        bMelodik = bInMel;
     }
-            
+
+    public boolean getFullscreen() {
+        return bFullscreen;
+    }
+
+    public void setFullscreen(boolean bInFull) {
+        bFullscreen = bInFull;
+    }
+
+    public boolean getScanlines() {
+        return bScanlines;
+    }
+
+    public void setScanlines(boolean bInScan) {
+        bScanlines = bInScan;
+    }
+
     public void setRomType(byte b) {
-        if (b!=Rom) {
+        if (b != Rom) {
             Rom = b;
         }
     }
@@ -56,7 +74,7 @@ public class Config {
     public byte getRomType() {
         return Rom;
     }
-    
+
     public void setRomA(String s) {
         if (!s.equals(RomA)) {
             RomA = s;
@@ -66,7 +84,7 @@ public class Config {
     public String getRomA() {
         return RomA;
     }
-    
+
     public void setRomB(String s) {
         if (!s.equals(RomB)) {
             RomB = s;
@@ -76,7 +94,7 @@ public class Config {
     public String getRomB() {
         return RomB;
     }
-    
+
     public String getRomsDirectory() {
         return RomDir;
     }
@@ -84,11 +102,11 @@ public class Config {
     public String getBasicA() {
         return BASIC_a;
     }
-    
+
     public String getBasicB() {
         return BASIC_b;
     }
-    
+
     public String getTeslaA() {
         return TESLA_a;
     }

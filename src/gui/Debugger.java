@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 import javax.swing.JScrollPane;
 import javax.swing.text.BadLocationException;
@@ -47,8 +45,8 @@ public class Debugger extends javax.swing.JFrame {
 
     public class StepBP {
 
-        boolean bStatus;
-        int nAdress;
+        public boolean bStatus;
+        public int nAdress;
 
         StepBP() {
             bStatus = false;
@@ -86,6 +84,8 @@ public class Debugger extends javax.swing.JFrame {
     JNumberTextField txtByte = null;
     Integer nByteAddress = null;
     Font fntDefaultMonospace = null;
+    //v pripade, ze se jedna o step into bez historie predchoziho kodu (napr. skok pri nahrati image)
+    public boolean bSpecialStepInto = false;
 
     /**
      * Creates new form Debugger
@@ -193,6 +193,38 @@ public class Debugger extends javax.swing.JFrame {
         if (bBP5Checked) {
             m.cpu.setBreakpoint(nBP5, true);
         }
+    }
+
+    //vraci true, pokud je breakpoint od debuggeru (breakpointy se obecne pouzivaji i jinde)
+    public boolean isDebuggerBkp(int nBpkToCheck) {
+        boolean bRet = false;
+        
+        if (bBP1Checked) {
+            if (nBP1 == nBpkToCheck) {
+                bRet = true;
+            }
+        }
+        if (bBP2Checked) {
+            if (nBP2 == nBpkToCheck) {
+                bRet = true;
+            }
+        }
+        if (bBP3Checked) {
+            if (nBP3 == nBpkToCheck) {
+                bRet = true;
+            }
+        }
+        if (bBP4Checked) {
+            if (nBP4 == nBpkToCheck) {
+                bRet = true;
+            }
+        }
+        if (bBP5Checked) {
+            if (nBP5 == nBpkToCheck) {
+                bRet = true;
+            }
+        }
+        return bRet;
     }
 
     public void fillAsmCode() {
@@ -310,36 +342,35 @@ public class Debugger extends javax.swing.JFrame {
             if (i2 > 65535) {
                 i2 = i2 - 65535;
             }
-            String strLine = String.format("#%04X #%04X\n", i1, 256 * ((0xff) & (byte) m.mem.readByte(i2)) + ((0xff) & (byte) m.mem.readByte(i1)));            
+            String strLine = String.format("#%04X #%04X\n", i1, 256 * ((0xff) & (byte) m.mem.readByte(i2)) + ((0xff) & (byte) m.mem.readByte(i1)));
             try {
-                doc.insertString(doc.getLength(), strLine, null );                
-            } catch (BadLocationException ex) {                
+                doc.insertString(doc.getLength(), strLine, null);
+            } catch (BadLocationException ex) {
             }
         }
         SimpleAttributeSet grayText = new SimpleAttributeSet();
-        StyleConstants.setForeground(grayText, new Color(215,215,215)); 
+        StyleConstants.setForeground(grayText, new Color(215, 215, 215));
 
-        
         try {
             doc.insertString(doc.getLength(), "\n", null);
             String strA3 = String.format("Port03(F7h):#%02X\n", m.portA3);
             doc.insertString(doc.getLength(), strA3, null);
-            int nPortValue=(0xff) & (byte)m.portA3;         
+            int nPortValue = (0xff) & (byte) m.portA3;
             doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
             doc.insertString(doc.getLength(), String.format("%8s\n", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
             String strA1 = String.format("Port09(FDh):#%02X\n", m.portA1);
             doc.insertString(doc.getLength(), strA1, null);
-            nPortValue=(0xff) & (byte)m.portA1;
+            nPortValue = (0xff) & (byte) m.portA1;
             doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
             doc.insertString(doc.getLength(), String.format("%8s\n", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
             String strA0 = String.format("Port10(FEh):#%02X\n", m.portA0);
             doc.insertString(doc.getLength(), strA0, null);
-            nPortValue=(0xff) & (byte)m.portA0;
+            nPortValue = (0xff) & (byte) m.portA0;
             doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
-            doc.insertString(doc.getLength(), String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);                 
+            doc.insertString(doc.getLength(), String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
         } catch (BadLocationException ex) {
         }
-    
+
     }
 
     public void fillBps() {
@@ -470,19 +501,19 @@ public class Debugger extends javax.swing.JFrame {
             int[] nAdressesCount = new int[10];
             int nCntAdd = 0;
             int nCntAdd2 = 0;
-            int nActualPos=0;
-            int nCorrection=0;
+            int nActualPos = 0;
+            int nCorrection = 0;
             Arrays.fill(nAdressesTmp, (byte) 0);
             Arrays.fill(nAdressesTmp2, (byte) 0);
             Arrays.fill(nAdressesCount, (byte) 0);
 
             int nShift = 30;
             while (nShift < 40) {
-                nCorrection=0;
+                nCorrection = 0;
                 int memPtrTmpStart = memPtr - nShift;
                 if (memPtrTmpStart < 0) {
                     memPtrTmpStart = 65536 + memPtrTmpStart;
-                    nCorrection=65536;
+                    nCorrection = 65536;
                 }
                 int memPtrTmp = memPtrTmpStart;
 
@@ -493,14 +524,14 @@ public class Debugger extends javax.swing.JFrame {
                         memPtrTmp = 0;
                     }
                 }
-                
+
                 memPtrTmp = memPtrTmpStart;
                 //loop
                 boolean bFinish = false;
                 int nLastAddress = memPtrTmp;
                 while (bFinish == false) {
                     byte OpcodeLen = disassembler.OpcodeLen(memPtrTmp);
-                    if (memPtrTmp + OpcodeLen > memPtrOver+nCorrection) {
+                    if (memPtrTmp + OpcodeLen > memPtrOver + nCorrection) {
                         nAdressesTmp[nCntAdd] = nLastAddress;
                         nCntAdd++;
                         bFinish = true;
@@ -512,34 +543,34 @@ public class Debugger extends javax.swing.JFrame {
                 nShift++;
             }
             //zjistim cetnost vyskytu
-            for(nCntAdd2=0;nCntAdd2<nCntAdd;nCntAdd2++){
-                boolean bSet=false;
-                for(int i=0;(i<nActualPos)&&(bSet==false);i++){
-                 if(nAdressesTmp2[i]==nAdressesTmp[nCntAdd2]){
-                     nAdressesCount[i]=nAdressesCount[i]+1;
-                     bSet=true;
-                 }
+            for (nCntAdd2 = 0; nCntAdd2 < nCntAdd; nCntAdd2++) {
+                boolean bSet = false;
+                for (int i = 0; (i < nActualPos) && (bSet == false); i++) {
+                    if (nAdressesTmp2[i] == nAdressesTmp[nCntAdd2]) {
+                        nAdressesCount[i] = nAdressesCount[i] + 1;
+                        bSet = true;
+                    }
                 }
-                if(bSet==false){
-                    nAdressesTmp2[nActualPos]=nAdressesTmp[nCntAdd2];
+                if (bSet == false) {
+                    nAdressesTmp2[nActualPos] = nAdressesTmp[nCntAdd2];
                     nActualPos++;
                 }
             }
             //najdu nejcetnejsi adresu
-            int nMaxAddr=nAdressesTmp2[0];
-            int nMaxValue=0;
-            for(int i=0;i<nCntAdd;i++){
-                if(nAdressesCount[i]>=nMaxValue){
-                    nMaxValue=nAdressesCount[i];
-                    nMaxAddr= nAdressesTmp2[i];
+            int nMaxAddr = nAdressesTmp2[0];
+            int nMaxValue = 0;
+            for (int i = 0; i < nCntAdd; i++) {
+                if (nAdressesCount[i] >= nMaxValue) {
+                    nMaxValue = nAdressesCount[i];
+                    nMaxAddr = nAdressesTmp2[i];
                 }
             }
-            nStepMinusAsm=memPtrOver-nMaxAddr;
-            if(nStepMinusAsm<0){
-               nStepMinusAsm = 65536 + nStepMinusAsm;
+            nStepMinusAsm = memPtrOver - nMaxAddr;
+            if (nStepMinusAsm < 0) {
+                nStepMinusAsm = 65536 + nStepMinusAsm;
             }
-            if(nStepMinusAsm==0){
-               nStepMinusAsm = 1;
+            if (nStepMinusAsm == 0) {
+                nStepMinusAsm = 1;
             }
 
         }
@@ -970,7 +1001,7 @@ public class Debugger extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+//step Into
     private void jStepButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jStepButtonActionPerformed
         // m.cpu.setBreakpoint(nNextInstr, true);
         boolean bSaveSt = utils.Config.bBP6;
@@ -979,7 +1010,9 @@ public class Debugger extends javax.swing.JFrame {
             //zastaveni na memory breakpointu         
             utils.Config.bBP6 = false;
         }
-        m.cpu.executeOne();
+        if (!bSpecialStepInto) {
+            m.cpu.executeOne();
+        }
         //m.genDispTables();        
         m.scr.repaint();
         if (m.cpu.bMemBP) {
@@ -988,6 +1021,7 @@ public class Debugger extends javax.swing.JFrame {
         }
         refreshDlg();
         jStepButton.setEnabled(true);
+        bSpecialStepInto = false;
     }//GEN-LAST:event_jStepButtonActionPerformed
 
     private void jRunButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRunButtonActionPerformed
@@ -1241,11 +1275,14 @@ public class Debugger extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextAsmCodeMouseClicked
 
     private void jStepIntoButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jStepIntoButtonActionPerformed
-        m.cpu.setBreakpoint(m.cpu.getRegPC(), false);//vypnu pripadny breakpoint na aktualni adrese, jinak bych se nikam nepohnul
+        if (!bSpecialStepInto) {
+            m.cpu.setBreakpoint(m.cpu.getRegPC(), false);//vypnu pripadny breakpoint na aktualni adrese, jinak bych se nikam nepohnul
+        } else {
+        }
         m.cpu.setBreakpoint(stpBP.nAdress, true);
         stpBP.bStatus = true;
         //JOptionPane.showMessageDialog(null, String.format("%04X",nNextInstr));
-        if(m.melodik.isEnabled()){
+        if (m.melodik.isEnabled()) {
             m.melodik.initChip();
         }
         if (m.cpu.bMemBP) {
@@ -1262,6 +1299,7 @@ public class Debugger extends javax.swing.JFrame {
         jStepButton.setEnabled(false);
         jRunButton.setIcon(icoStop);
         jRunButton.setToolTipText("Stop");
+        bSpecialStepInto = false;
         //this.dispose();
     }//GEN-LAST:event_jStepIntoButtonActionPerformed
 

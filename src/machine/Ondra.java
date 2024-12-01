@@ -43,7 +43,7 @@ public class Ondra extends Thread
     public Clock clk;
     public Z80 cpu;
     public Tape tap;
-    private JOndra frame;
+    public JOndra frame;
     public static long nSpeedPercent = 0;
     public int nSpeedPercentUpdateMaxCycles = 50;
     public int nSpeedPercentUpdateDec = nSpeedPercentUpdateMaxCycles;
@@ -74,14 +74,17 @@ public class Ondra extends Thread
     public int nRozliseni = 255;
     boolean bFrst = true;
 
+    public boolean bAutoRunAfterReset = false;
+
     public Ondra() {
         img = new BufferedImage(320, 256, BufferedImage.TYPE_BYTE_BINARY);
-        px
-                = ((DataBufferByte) img.getRaster().getDataBuffer()).getBankData()[0];
+        px = ((DataBufferByte) img.getRaster().getDataBuffer()).getBankData()[0];
         cfg = new Config();
         utils.Config.LoadConfig();
         cfg.setAudio(utils.Config.bAudio);
         cfg.setMelodik(utils.Config.bMelodik);
+        cfg.setFullscreen(utils.Config.bFullscreen);
+        cfg.setScanlines(utils.Config.bScanlines);
         mem = new Memory(this, cfg);
         msSpeed = 20;
         tim = new Timer("Timer");
@@ -248,7 +251,7 @@ public class Ondra extends Thread
 
     public void genDispTables() {
         Arrays.fill(dispAdr, -1);
-        Arrays.fill(px, (byte)0);
+        Arrays.fill(px, (byte) 0);
         int nSkew = 255 - nRozliseni;
         int adr = 0;
         int vm;
@@ -300,20 +303,32 @@ public class Ondra extends Thread
             }
         }
 
-        if (bFrst) {
-            //pokud je v command line nazev souboru, tak ho nahraji do pameti a spustim
+        if ((bFrst) && (frame.strArgFile.length() > 0) && (frame.nStartAddress < 0)) {
+            //pokud je v command line nazev souboru a neni tam zadna cilova adresa do ktere musi CPU dojit, tak ho nahraji do pameti ihned a spustim
             bFrst = false;
-            snd.setEnabled(cfg.getAudio());
-            melodik.setEnabled(cfg.getMelodik());
-            frame.LoadBinSilently();
+            StartArgumentImage(true);
+        } else if ((frame.strArgFile.length() > 0) && (frame.nStartAddress >= 0)) {
+            //nahrani binarky a spusteni az po dosazeni nejake adresy predane v argumentu cmd - napr. az po inicializaci obrazovky
+            if (bAutoRunAfterReset) {
+                //smazu predchozi BP, pokud ho nebylo dosazeno
+                cpu.setBreakpoint(frame.nStartAddress, false);
+            }
+            cpu.setBreakpoint(frame.nStartAddress, true);
+            bAutoRunAfterReset = true;
         }
 
+    }
+
+    public void StartArgumentImage(boolean bAutoStart) {
+        snd.setEnabled(cfg.getAudio());
+        melodik.setEnabled(cfg.getMelodik());
+        frame.LoadBinSilently(bAutoStart);
     }
 
     @Override
     public void run() {
         //pokud je v command line nazev souboru, tak vypnu zvuk dokud nenahraji soubor do pameti
-        if (frame.strArgument.length() > 0) {
+        if (frame.strArgFile.length() > 0) {
             snd.setEnabled(false);
             melodik.setEnabled(false);
         }
@@ -323,7 +338,6 @@ public class Ondra extends Thread
         } catch (InterruptedException ex) {
 
         }
-        //frame.LoadBinSilently();
         boolean forever = true;
         while (forever) {
             try {
@@ -334,12 +348,11 @@ public class Ondra extends Thread
         }
     }
 
-    public void processVram(int address, int data) {
-        data &= 0xff;
+    public void processVram(int address) {
         int x = dispAdr[address - 0xd800];
         if (x != -1 && dmaEnabled) {
-            px[x] = (byte) data;
-        //    scr.repaint(x % 40, x / 40, 8, 1);
+            px[x] = mem.readRam(address);
+            //    scr.repaint(x % 40, x / 40, 8, 1);
         }
     }
 
@@ -482,9 +495,9 @@ public class Ondra extends Thread
         }
         if ((port & 0x01) == 0) {
             portA0 = (byte) value;
-            if (snd.isEnabled()) {                
+            if (snd.isEnabled()) {
                 snd.fillBuffer.fillWithSample(((value & 224) >>> 5), clk.getTstates());
-            }            
+            }
             if ((portA0 & 0x01) == 0) {
                 GreenLed.setEnabled(true);
             } else {
@@ -656,7 +669,7 @@ public class Ondra extends Thread
             res = mem.loadSnapshotRam(fIn);
 
             for (i = 0xd800; i < 0x10000; i++) {
-                processVram(i, mem.readRam(i));
+                processVram(i);
             }
 
             try {

@@ -1,5 +1,6 @@
 package gui;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -8,44 +9,71 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 
+
 /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 /**
  *
  * @author admin
  */
 public class Screen extends javax.swing.JPanel {
 
+    private boolean fullscreenMode = false; // Výchozí režim: normální
+    private int ratio = 2; // Výchozí pomer zvetseni 2x
+    private boolean scanlines = false; // Výchozí režim: no scanlines
     private BufferedImage image;
-    
+
     private AffineTransform tr;
     private AffineTransformOp trOp;
     private RenderingHints rHints;
-    
+
+    public void setScanlines(boolean bScan) {
+        scanlines = bScan;
+    }
+
+    public void setFullScreen(boolean bFullScr) {
+        fullscreenMode = bFullScr;
+    }
+
+    public boolean getFullscreenStatus() {
+        return fullscreenMode;
+    }
+
+    public void setRatio(int nRat) {
+        ratio = nRat;
+    }
+
+    public int getRatio() {
+        return ratio;
+    }
+
+    public BufferedImage getImage() {
+        return image;
+    }
+
     /**
      * Creates new form JIQScreen
      */
     public Screen() {
         initComponents();
-        
+
         image = null;
-        
+
         tr = AffineTransform.getScaleInstance(2.0f, 2.0f);
-        
+
         rHints = new RenderingHints(RenderingHints.KEY_INTERPOLATION,
-            RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         rHints.put(RenderingHints.KEY_RENDERING,
-            RenderingHints.VALUE_RENDER_SPEED);
+                RenderingHints.VALUE_RENDER_SPEED);
         rHints.put(RenderingHints.KEY_ANTIALIASING,
-            RenderingHints.VALUE_ANTIALIAS_OFF);
+                RenderingHints.VALUE_ANTIALIAS_OFF);
         rHints.put(RenderingHints.KEY_COLOR_RENDERING,
-            RenderingHints.VALUE_COLOR_RENDER_SPEED);
-        
+                RenderingHints.VALUE_COLOR_RENDER_SPEED);
+
         trOp = new AffineTransformOp(tr, rHints);
-        
+
         setMinimumSize(new Dimension(640, 512));
         setMaximumSize(new Dimension(640, 512));
         setPreferredSize(new Dimension(640, 512));
@@ -54,16 +82,68 @@ public class Screen extends javax.swing.JPanel {
     public void setImage(BufferedImage img) {
         image = img;
     } // setImage
-                
+
     @Override
     public void paintComponent(Graphics gc) {
-        Graphics2D gc2 = (Graphics2D) gc;
-        
-        if (image!=null) {
-            gc2.drawImage(image, trOp, 0, 0);
+        Graphics2D g2d = (Graphics2D) gc;
+
+        // Vyplnění pozadí černou barvou
+        g2d.setColor(Color.BLACK);
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+        if (image != null) {
+            // Získat rozměry panelu
+            int panelWidth = getWidth();
+            int panelHeight = getHeight();
+
+            // Rozměry původního obrazu
+            int imageWidth = image.getWidth();
+            int imageHeight = image.getHeight();
+
+            int renderWidth, renderHeight;
+            int offsetX, offsetY;
+
+            if (fullscreenMode) {
+                // Fullscreen režim: škálování podle celé obrazovky
+                double scaleX = (double) panelWidth / imageWidth;
+                double scaleY = (double) panelHeight / imageHeight;
+                double scale = Math.min(scaleX, scaleY); // Zachovat poměr stran
+
+                renderWidth = (int) (imageWidth * scale);
+                renderHeight = (int) (imageHeight * scale);
+
+                offsetX = (panelWidth - renderWidth) / 2;
+                offsetY = (panelHeight - renderHeight) / 2;
+            } else {
+                // Normální režim: pevné škálování podle ratio
+                renderWidth = imageWidth * ratio;
+                renderHeight = imageHeight * ratio;
+
+                // Centrovat obraz do panelu
+                offsetX = Math.max(0, (panelWidth - renderWidth) / 2);
+                offsetY = Math.max(0, (panelHeight - renderHeight) / 2);
+            }
+
+            // Vykreslit obraz s danými rozměry a odsazením
+            g2d.drawImage(image, offsetX, offsetY, renderWidth, renderHeight, null);
+
+            // Přidání prokládání (scanlines) v fullscreen režimu
+            if (fullscreenMode) {
+                if (scanlines) {
+                    addScanlines(g2d, offsetX, offsetY, renderWidth, renderHeight);
+                }
+            }
         }
-    } // paintComponent
-            
+    }
+
+// Metoda pro přidání prokládání (scanlines)
+    private void addScanlines(Graphics2D g2d, int offsetX, int offsetY, int width, int height) {
+        g2d.setColor(new Color(0, 0, 0, 50)); // Tmavá barva s průhledností
+        for (int y = offsetY; y < offsetY + height; y += 4) { // Čáry každé 4 pixely
+            g2d.fillRect(offsetX, y, width, 2); // Čára o výšce 2 pixelů
+        }
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

@@ -578,7 +578,7 @@ public class Z80 {
         return regPC;
     }
 
-    public final void setRegPC(int address) {
+    public final void setRegPC(int address) {        
         regPC = address & 0xffff;
     }
 
@@ -1746,14 +1746,36 @@ public class Z80 {
             opCode = MemIoImpl.fetchOpcode(regPC);
 
             if (breakpointAt[regPC]) {
-                opCode = NotifyImpl.atAddress(regPC, opCode);
+                boolean bBreak = false;
                 Ondra m = (Ondra) NotifyImpl;
-                m.stopEmulation();
-
-                m.getDebugger().showDialog();
-                break;
+                if (m.getDebugger().isDebuggerBkp(regPC)) {
+                    //breakpoint z Debuggeru
+                    opCode = NotifyImpl.atAddress(regPC, opCode);
+                    m.stopEmulation();
+                    m.getDebugger().showDialog();
+                    bBreak = true;
+                }
+                if ((m.bAutoRunAfterReset) && (regPC == m.frame.nStartAddress)) {
+                    boolean isDebBkp = m.getDebugger().isDebuggerBkp(regPC);
+                    //nahrani image                       
+                    if (!isDebBkp) {
+                        setBreakpoint(regPC, false);
+                    }
+                    m.bAutoRunAfterReset = false;
+                    m.StartArgumentImage(false);
+                    //nastavim aby se pripadne debbuger zastavil hned pri skoku na uvedenou adresu, pokud je na ni BP
+                    //standardne se BP na adrese, kde stojim, maze pred spustenim emulace aby se dalo nekam pohonout
+                    m.getDebugger().bSpecialStepInto = true;
+                    if (!isDebBkp) {
+                        m.startEmulation();
+                    }
+                    bBreak = true;
+                }
+                if (bBreak) {
+                    break;
+                }
             }
-        
+
             regPC = (regPC + 1) & 0xffff;
 
             decodeOpcode(opCode);

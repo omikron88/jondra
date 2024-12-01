@@ -4,8 +4,12 @@
  */
 package gui;
 
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
@@ -34,6 +38,7 @@ public class JOndra extends javax.swing.JFrame {
 
     private Ondra m;
     private Screen scr;
+    boolean bFullscreen = false;
 
     private Debugger deb;
     private BinOpen bopn;
@@ -41,23 +46,43 @@ public class JOndra extends javax.swing.JFrame {
     private KeyboardPicture kbrd;
     private boolean bFirstShowKbd = true;
     public String strHomeDirectory = "";
-    public String strArgument = "";
+    public String strArgFile = "";
+    public int nStartAddress = -1;
     //snazim se nabidnout co nejvhodnejsi filename pro sceenshot a snapshot
-    //je vyplneno pri otevreni nejakeho osuboru tap, wav, csw nebo bin
+    //je vyplneno pri otevreni nejakeho suboru tap, wav, csw nebo bin
     private String strSnapshotNameProposal = "";
     private String strSceenshotNameProposal = "";
 
     /**
      * Creates new form JOndra
      */
-    public JOndra(String strArg) {
+    public JOndra(String args[]) {
 
         strHomeDirectory = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
         if (strHomeDirectory.contains("/")) {
             int pos = strHomeDirectory.lastIndexOf("/");
             strHomeDirectory = strHomeDirectory.substring(0, pos);
         }
-        strArgument = strArg;
+
+        if (args.length > 0) {
+            if (args.length == 1) {
+                strArgFile = args[0];
+            } else if (args.length == 2) {
+                strArgFile = args[0];
+                nStartAddress = -1;
+                try {
+                    if (args[1].length() > 0) {
+                        String strAddress = args[1].toLowerCase();
+                        strAddress = strAddress.replace("0x", "");
+                        strAddress = strAddress.replace("h", "");
+                        nStartAddress = Integer.valueOf(strAddress, 16);
+                    }
+                } catch (Exception ex) {
+                    nStartAddress = -1;
+                }
+
+            }
+        }
         Config.LoadConfig();
         initComponents();
         setIconImage((new ImageIcon(getClass().getResource("/icons/ondra.png")).getImage()));
@@ -65,17 +90,102 @@ public class JOndra extends javax.swing.JFrame {
         jMenuBar1.remove(jAbout);
         jMenuBar1.add(Box.createHorizontalGlue());
         jMenuBar1.add(jAbout);
+
         initEmulator();
+        // Nastavení výchozího režimu
+        setFullscreen(Config.bFullscreen);
+        scr.setScanlines(Config.bScanlines);
+
+        // Přidání KeyListeneru pro zachycení F11        
+        addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_F12) {
+                    // Přepnout fullscreen režim
+                    setFullscreen(!bFullscreen);
+                }
+            }
+        });
+         
 
     }
 
-    public void LoadBinSilently() {
-        if (strArgument.length() > 0) {
+    public void updateWindowSize() {
+        if (!scr.getFullscreenStatus()) {
+            int ratio = scr.getRatio();
+            BufferedImage image = scr.getImage();
+            int imageWidth = image.getWidth() * ratio;
+            int imageHeight = image.getHeight() * ratio;
+
+            // Získání dekorací okna
+            Insets insets = getInsets();
+            int decorWidth = insets.left + insets.right;
+            int decorHeight = insets.top + insets.bottom;
+
+            if (ToolBar.isVisible()) {
+                decorHeight += ToolBar.getHeight();
+            }
+            if (jMenuBar1.isVisible()) {
+                decorHeight += jMenuBar1.getHeight();
+            }
+            if (statusPanel.isVisible()) {
+                decorHeight += statusPanel.getHeight();
+            }
+            // Nastavení velikosti okna na základě obrazu + dekorací
+            int frameWidth = imageWidth + decorWidth;
+            int frameHeight = imageHeight + decorHeight;
+
+            // Nastavení velikosti okna
+            setSize(frameWidth, frameHeight);
+
+            // Centrovat okno na obrazovce
+            setLocationRelativeTo(null);
+
+            // Zajištění, že panel `Screen` bude mít stejnou velikost jako obraz
+            scr.setPreferredSize(new Dimension(imageWidth, imageHeight));
+            scr.revalidate();
+        }
+    }
+
+    public void setFullscreen(boolean fullscreenMode) {
+        bFullscreen = fullscreenMode;
+        scr.setFullScreen(fullscreenMode); // Nastavení fullscreen statusu v komponentě obrazovky
+        GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+
+        if (fullscreenMode) {
+            // Přepnout na fullscreen režim
+            dispose(); // Umožňuje změnit dekorace
+            setUndecorated(true); // Skrytí dekorací
+            setJMenuBar(null); // Skrytí menu
+            statusPanel.setVisible(false); // Skryje status bar
+            ToolBar.setVisible(false); // Skrytí toolbaru
+
+            // Nastavení fullscreen přes GraphicsDevice
+            gd.setFullScreenWindow(this);
+        } else {
+            // Přepnout na normální režim
+            gd.setFullScreenWindow(null);
+            dispose(); // Umožňuje změnit dekorace
+            setUndecorated(false); // Zobrazení dekorací
+            setJMenuBar(jMenuBar1); // Zobrazení menu
+            ToolBar.setVisible(true); // Zobrazení toolbaru
+            statusPanel.setVisible(true); // Zobrazí status bar
+
+            // Nastavit velikost okna zpět na původní
+            pack();
+            setLocationRelativeTo(null);
+            setVisible(true);
+        }
+        updateWindowSize();
+    }
+
+    public void LoadBinSilently(boolean bAutoStart) {
+        if (strArgFile.length() > 0) {
             String strFile = "";
-            if (strArgument.contains("/") || strArgument.contains("\\")) {
-                strFile = strArgument;
-            } else {                
-                strFile = strHomeDirectory + "/" + strArgument;
+            if (strArgFile.contains("/") || strArgFile.contains("\\")) {
+                strFile = strArgFile;
+            } else {
+                strFile = strHomeDirectory + "/" + strArgFile;
             }
             m.stopEmulation();
             BufferedInputStream fIn;
@@ -104,7 +214,7 @@ public class JOndra extends javax.swing.JFrame {
                             }
                         }
                     } else if (bType == 2) {
-                        //blok ke spusteni
+                        //blok ke spusteni                        
                         nMemAdr = fIn.read() + 256 * fIn.read();
                         m.cpu.setRegPC(nMemAdr);
                         bFinish = true;
@@ -118,7 +228,9 @@ public class JOndra extends javax.swing.JFrame {
             }
             //nastavim Ondru na spravnou rychlost
             m.setClockSpeed(20);
-            m.startEmulation();
+            if (bAutoStart) {
+                m.startEmulation();
+            }
         }
     }
 
@@ -601,6 +713,7 @@ public class JOndra extends javax.swing.JFrame {
             m.Reset(false);
         }
         set.dispose();
+        scr.setScanlines(Config.bScanlines);
         if (!pau)
             m.startEmulation();
     }//GEN-LAST:event_bSettingsActionPerformed
@@ -998,6 +1111,8 @@ public class JOndra extends javax.swing.JFrame {
     private void initEmulator() {
         m = new Ondra();
         scr = new Screen();
+        scr.setFullScreen(bFullscreen);
+        scr.setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
 
         m.setScreen(scr);
         scr.setImage(m.getImage());
@@ -1067,11 +1182,7 @@ public class JOndra extends javax.swing.JFrame {
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                String strArg = "";
-                if (args.length > 0) {
-                    strArg = args[0];
-                }
-                new JOndra(strArg).setVisible(true);
+                new JOndra(args).setVisible(true);
 
             }
         });

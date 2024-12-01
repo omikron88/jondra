@@ -35,7 +35,8 @@ public class Settings extends javax.swing.JDialog {
     
     public void showDialog(Config conf) {
         cf = conf;
-        setSize(414, 410);
+        setSize(414, 450);
+        pack();
         switch(cf.getRomType()) {
             case 0: {
                 bBasic.setSelected(true);
@@ -64,7 +65,8 @@ public class Settings extends javax.swing.JDialog {
         
         jSound.setSelected(cf.getAudio());
         jMelodik.setSelected(cf.getMelodik());
-        
+        jCheckFullscreen.setSelected(cf.getFullscreen());
+        jCheckScanlines.setSelected(cf.getScanlines());
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width-getSize().width)/2, (screen.height-getSize().height)/2);
         setModal(true);
@@ -104,6 +106,8 @@ public class Settings extends javax.swing.JDialog {
         bOk = new javax.swing.JButton();
         jSound = new javax.swing.JCheckBox();
         jMelodik = new javax.swing.JCheckBox();
+        jCheckFullscreen = new javax.swing.JCheckBox();
+        jCheckScanlines = new javax.swing.JCheckBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Settings");
@@ -208,6 +212,20 @@ public class Settings extends javax.swing.JDialog {
             }
         });
 
+        jCheckFullscreen.setText("Launch in Fullscreen (Toggle with F12)");
+        jCheckFullscreen.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jCheckFullscreenActionPerformed(evt);
+            }
+        });
+
+        jCheckScanlines.setText("Enable Scanlines in Fullscreen");
+        jCheckScanlines.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jCheckScanlinesActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -215,7 +233,7 @@ public class Settings extends javax.swing.JDialog {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(167, 167, 167)
                 .addComponent(bOk)
-                .addContainerGap(191, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -229,6 +247,8 @@ public class Settings extends javax.swing.JDialog {
                         .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jCheckScanlines)
+                            .addComponent(jCheckFullscreen)
                             .addComponent(jMelodik)
                             .addComponent(jSound)
                             .addComponent(lRomB)
@@ -237,7 +257,7 @@ public class Settings extends javax.swing.JDialog {
                             .addComponent(bTesla)
                             .addComponent(bVili)
                             .addComponent(bBasic))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                        .addGap(0, 72, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
@@ -268,8 +288,12 @@ public class Settings extends javax.swing.JDialog {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jMelodik)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jCheckFullscreen)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jCheckScanlines)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 14, Short.MAX_VALUE)
                 .addComponent(bOk)
-                .addContainerGap(26, Short.MAX_VALUE))
+                .addContainerGap())
         );
 
         getContentPane().add(jPanel1);
@@ -363,6 +387,20 @@ public class Settings extends javax.swing.JDialog {
         utils.Config.SaveConfig();
         ResetNeeded = true;
     }//GEN-LAST:event_jMelodikActionPerformed
+
+    private void jCheckFullscreenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckFullscreenActionPerformed
+        cf.setFullscreen(jCheckFullscreen.isSelected());
+        utils.Config.bFullscreen=cf.getFullscreen();
+        utils.Config.SaveConfig();        
+        ResetNeeded = false;
+    }//GEN-LAST:event_jCheckFullscreenActionPerformed
+
+    private void jCheckScanlinesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckScanlinesActionPerformed
+        cf.setScanlines(jCheckScanlines.isSelected());
+        utils.Config.bScanlines=cf.getScanlines();
+        utils.Config.SaveConfig();
+        ResetNeeded = false;
+    }//GEN-LAST:event_jCheckScanlinesActionPerformed
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton bBasic;
@@ -373,6 +411,8 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JRadioButton bTesla;
     private javax.swing.JRadioButton bVili;
     private javax.swing.ButtonGroup buttonGroup1;
+    private javax.swing.JCheckBox jCheckFullscreen;
+    private javax.swing.JCheckBox jCheckScanlines;
     private javax.swing.JCheckBox jMelodik;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JCheckBox jSound;
