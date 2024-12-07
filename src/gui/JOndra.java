@@ -4,7 +4,6 @@
  */
 package gui;
 
-
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GraphicsDevice;
@@ -39,6 +38,7 @@ public class JOndra extends javax.swing.JFrame {
     private Ondra m;
     private Screen scr;
     boolean bFullscreen = false;
+    int nScaleNx = 0;
 
     private Debugger deb;
     private BinOpen bopn;
@@ -95,18 +95,18 @@ public class JOndra extends javax.swing.JFrame {
         // Nastavení výchozího režimu
         setFullscreen(Config.bFullscreen);
         scr.setScanlines(Config.bScanlines);
-
+        scr.setScaleNx(Config.bScaleNx);
         // Přidání KeyListeneru pro zachycení F11        
         addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_F12) {
                     // Přepnout fullscreen režim
+                    scr.setScaleNx(Config.bScaleNx);
                     setFullscreen(!bFullscreen);
                 }
             }
         });
-         
 
     }
 

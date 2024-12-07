@@ -22,6 +22,7 @@ public class Screen extends javax.swing.JPanel {
 
     private boolean fullscreenMode = false; // Výchozí režim: normální
     private int ratio = 2; // Výchozí pomer zvetseni 2x
+    private boolean scaleNx = false; // ScaleNx
     private boolean scanlines = false; // Výchozí režim: no scanlines
     private BufferedImage image;
 
@@ -35,6 +36,14 @@ public class Screen extends javax.swing.JPanel {
 
     public void setFullScreen(boolean bFullScr) {
         fullscreenMode = bFullScr;
+    }
+
+    public void setScaleNx(boolean bScaleNx) {
+        scaleNx = bScaleNx;
+    }
+
+    public boolean getScaleNx() {
+        return scaleNx;
     }
 
     public boolean getFullscreenStatus() {
@@ -84,7 +93,7 @@ public class Screen extends javax.swing.JPanel {
     } // setImage
 
     @Override
-    public void paintComponent(Graphics gc) {
+    public void paintComponent(Graphics gc) {        
         Graphics2D g2d = (Graphics2D) gc;
 
         // Vyplnění pozadí černou barvou
@@ -92,49 +101,98 @@ public class Screen extends javax.swing.JPanel {
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
         if (image != null) {
-            // Získat rozměry panelu
+            // Rozměry panelu
             int panelWidth = getWidth();
             int panelHeight = getHeight();
 
-            // Rozměry původního obrazu
+            // Rozměry obrazu
             int imageWidth = image.getWidth();
             int imageHeight = image.getHeight();
 
+            BufferedImage scaledImage = null;
             int renderWidth, renderHeight;
             int offsetX, offsetY;
 
-            if (fullscreenMode) {
-                // Fullscreen režim: škálování podle celé obrazovky
+            if (fullscreenMode && scaleNx) {
+                // Použij ScaleNx algoritmus
+                scaledImage = applyScaleNx(image, panelWidth, panelHeight);                
+                renderWidth = scaledImage.getWidth();
+                renderHeight = scaledImage.getHeight();
+            } else if (fullscreenMode) {
+                // Fullscreen režim s klasickým škálováním
                 double scaleX = (double) panelWidth / imageWidth;
                 double scaleY = (double) panelHeight / imageHeight;
                 double scale = Math.min(scaleX, scaleY); // Zachovat poměr stran
 
                 renderWidth = (int) (imageWidth * scale);
                 renderHeight = (int) (imageHeight * scale);
-
-                offsetX = (panelWidth - renderWidth) / 2;
-                offsetY = (panelHeight - renderHeight) / 2;
+                scaledImage = image;
             } else {
-                // Normální režim: pevné škálování podle ratio
+                // Normální režim s pevně nastaveným ratio
                 renderWidth = imageWidth * ratio;
                 renderHeight = imageHeight * ratio;
-
-                // Centrovat obraz do panelu
-                offsetX = Math.max(0, (panelWidth - renderWidth) / 2);
-                offsetY = Math.max(0, (panelHeight - renderHeight) / 2);
+                scaledImage = image;
             }
 
-            // Vykreslit obraz s danými rozměry a odsazením
-            g2d.drawImage(image, offsetX, offsetY, renderWidth, renderHeight, null);
+            // Vypočítání odsazení pro centrování obrazu
+            offsetX = (panelWidth - renderWidth) / 2;
+            offsetY = (panelHeight - renderHeight) / 2;
 
-            // Přidání prokládání (scanlines) v fullscreen režimu
-            if (fullscreenMode) {
-                if (scanlines) {
-                    addScanlines(g2d, offsetX, offsetY, renderWidth, renderHeight);
-                }
+            // Vykreslení výsledného obrazu
+            g2d.drawImage(scaledImage, offsetX, offsetY, renderWidth, renderHeight, null);
+
+            if (fullscreenMode && scanlines) {
+                addScanlines(g2d, offsetX, offsetY, renderWidth, renderHeight);
             }
         }
     }
+
+    // Algoritmus ScaleNx
+    private BufferedImage applyScaleNx(BufferedImage input, int screenWidth, int screenHeight) {
+        int width = input.getWidth();
+        int height = input.getHeight();
+
+        // Výpočet scale faktoru
+        int scale = Math.min(screenWidth / width, screenHeight / height);
+
+        // Ujistíme se, že scale není menší než 1 (pro případ, že by byl obraz větší než okno)
+        scale = Math.max(scale, 1);
+
+        int newWidth = width * scale;
+        int newHeight = height * scale;
+
+        BufferedImage output = new BufferedImage(newWidth, newHeight, input.getType());
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int E = input.getRGB(x, y); // Aktuální pixel
+                int A = (y > 0) ? input.getRGB(x, y - 1) : E; // Horní pixel
+                int B = (x < width - 1) ? input.getRGB(x + 1, y) : E; // Pravý pixel
+                int C = (x > 0) ? input.getRGB(x - 1, y) : E; // Levý pixel
+                int D = (y < height - 1) ? input.getRGB(x, y + 1) : E; // Dolní pixel
+
+                // Každý pixel se zvětší na (scale x scale) čtverec
+                for (int dy = 0; dy < scale; dy++) {
+                    for (int dx = 0; dx < scale; dx++) {
+                        if (dy == 0 && dx == 0) {
+                            output.setRGB(x * scale + dx, y * scale + dy, (A == C && A != D && C != B) ? A : E);
+                        } else if (dy == 0 && dx == scale - 1) {
+                            output.setRGB(x * scale + dx, y * scale + dy, (A == B && A != D && B != C) ? B : E);
+                        } else if (dy == scale - 1 && dx == 0) {
+                            output.setRGB(x * scale + dx, y * scale + dy, (D == C && D != A && C != B) ? C : E);
+                        } else if (dy == scale - 1 && dx == scale - 1) {
+                            output.setRGB(x * scale + dx, y * scale + dy, (D == B && D != A && B != C) ? D : E);
+                        } else {
+                            output.setRGB(x * scale + dx, y * scale + dy, E); // Střední část
+                        }
+                    }
+                }
+            }
+        }
+
+        return output;
+    }
+  
 
 // Metoda pro přidání prokládání (scanlines)
     private void addScanlines(Graphics2D g2d, int offsetX, int offsetY, int width, int height) {

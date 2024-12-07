@@ -32,6 +32,7 @@ public class Config {
     private boolean bMelodik = true;
     private boolean bFullscreen = false;
     private boolean bScanlines = false;
+    private boolean bScaleNx = false;
 
     public boolean getAudio() {
         return bAudio;
@@ -63,6 +64,14 @@ public class Config {
 
     public void setScanlines(boolean bInScan) {
         bScanlines = bInScan;
+    }
+    
+     public boolean getScaleNx() {
+        return bScaleNx;
+    }
+
+    public void setScaleNx(boolean bInScale) {
+        bScaleNx = bInScale;
     }
 
     public void setRomType(byte b) {

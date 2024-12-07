@@ -85,6 +85,7 @@ public class Ondra extends Thread
         cfg.setMelodik(utils.Config.bMelodik);
         cfg.setFullscreen(utils.Config.bFullscreen);
         cfg.setScanlines(utils.Config.bScanlines);
+        cfg.setScaleNx(utils.Config.bScaleNx);
         mem = new Memory(this, cfg);
         msSpeed = 20;
         tim = new Timer("Timer");

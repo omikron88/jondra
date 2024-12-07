@@ -15,6 +15,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
@@ -101,6 +102,10 @@ public class Debugger extends javax.swing.JFrame {
         jScrollPane5.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane5.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
 
+        jScrollPane4.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        jScrollPane4.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        jTextStack.setMargin(new Insets(0, 0, -10, 0));
+        
         jRunButton.setIcon(icoRun);
 
         Font fntSelected = selectMonospaceFont();
@@ -357,17 +362,17 @@ public class Debugger extends javax.swing.JFrame {
             doc.insertString(doc.getLength(), strA3, null);
             int nPortValue = (0xff) & (byte) m.portA3;
             doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
-            doc.insertString(doc.getLength(), String.format("%8s\n", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
+            doc.insertString(doc.getLength(), String.format("%s\n", String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0").replace("0", "0 ").replace("1", "1 ").trim()), null);
             String strA1 = String.format("Port09(FDh):#%02X\n", m.portA1);
             doc.insertString(doc.getLength(), strA1, null);
             nPortValue = (0xff) & (byte) m.portA1;
             doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
-            doc.insertString(doc.getLength(), String.format("%8s\n", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
+            doc.insertString(doc.getLength(), String.format("%s\n", String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0").replace("0", "0 ").replace("1", "1 ").trim()), null);
             String strA0 = String.format("Port10(FEh):#%02X\n", m.portA0);
             doc.insertString(doc.getLength(), strA0, null);
             nPortValue = (0xff) & (byte) m.portA0;
             doc.insertString(doc.getLength(), "7 6 5 4 3 2 1 0\n", grayText);
-            doc.insertString(doc.getLength(), String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0 ").replace("1", "1 "), null);
+            doc.insertString(doc.getLength(), String.format("%s\n", String.format("%8s", Integer.toBinaryString(nPortValue)).replace(" ", "0").replace("0", "0 ").replace("1", "1 ").trim()), null);
         } catch (BadLocationException ex) {
         }
 

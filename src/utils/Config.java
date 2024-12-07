@@ -45,6 +45,7 @@ public class Config {
     public static boolean bMelodik = true;
     public static boolean bFullscreen = false;
     public static boolean bScanlines = false;
+    public static boolean bScaleNx = false;
     //ulozene udaje pro ukladani do binarniho souboru
     public static String strSaveBinFilePath = "";
     public static int nSaveFromAddress = 0;
@@ -94,6 +95,7 @@ public class Config {
         prop.setProperty("MELODIK", String.valueOf(bMelodik));
         prop.setProperty("FULLSCREEN", String.valueOf(bFullscreen));
         prop.setProperty("SCANLINES", String.valueOf(bScanlines));
+        prop.setProperty("SCALENX", String.valueOf(bScaleNx));        
 
         prop.setProperty("BINSAVEFILEPATH", String.valueOf(strSaveBinFilePath));
         prop.setProperty("BINSAVEADDRESSFROM", String.valueOf(nSaveFromAddress));
@@ -197,6 +199,7 @@ public class Config {
         bMelodik = parseBooleanSafe(prop.getProperty("MELODIK"), true);
         bFullscreen = parseBooleanSafe(prop.getProperty("FULLSCREEN"), false);
         bScanlines = parseBooleanSafe(prop.getProperty("SCANLINES"), false);
+        bScaleNx = parseBooleanSafe(prop.getProperty("SCALENX"), false);
         strSaveBinFilePath = nullToEmpty(prop.getProperty("BINSAVEFILEPATH"));
         strTapFilePath = nullToEmpty(prop.getProperty("TAPFILEPATH"));
         strSnapFilePath = nullToEmpty(prop.getProperty("SNAFILEPATH"));
