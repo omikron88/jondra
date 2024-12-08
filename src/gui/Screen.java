@@ -8,6 +8,7 @@ import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 
 
 /*
@@ -93,7 +94,7 @@ public class Screen extends javax.swing.JPanel {
     } // setImage
 
     @Override
-    public void paintComponent(Graphics gc) {        
+    public void paintComponent(Graphics gc) {
         Graphics2D g2d = (Graphics2D) gc;
 
         // Vyplnění pozadí černou barvou
@@ -114,8 +115,8 @@ public class Screen extends javax.swing.JPanel {
             int offsetX, offsetY;
 
             if (fullscreenMode && scaleNx) {
-                // Použij ScaleNx algoritmus
-                scaledImage = applyScaleNx(image, panelWidth, panelHeight);                
+                // Použij ScaleNx algoritmus                
+                scaledImage = applyScaleNx(image, panelWidth, panelHeight);
                 renderWidth = scaledImage.getWidth();
                 renderHeight = scaledImage.getHeight();
             } else if (fullscreenMode) {
@@ -147,43 +148,57 @@ public class Screen extends javax.swing.JPanel {
         }
     }
 
-    // Algoritmus ScaleNx
     private BufferedImage applyScaleNx(BufferedImage input, int screenWidth, int screenHeight) {
         int width = input.getWidth();
         int height = input.getHeight();
 
         // Výpočet scale faktoru
-        int scale = Math.min(screenWidth / width, screenHeight / height);
-
-        // Ujistíme se, že scale není menší než 1 (pro případ, že by byl obraz větší než okno)
-        scale = Math.max(scale, 1);
+        int scale = screenHeight / height;
+        if (screenWidth / width < scale) {
+            scale = screenWidth / width;
+        }
+        if (scale < 1) {
+            scale = 1;
+        }
 
         int newWidth = width * scale;
         int newHeight = height * scale;
 
         BufferedImage output = new BufferedImage(newWidth, newHeight, input.getType());
 
+        WritableRaster inputRaster = input.getRaster();
+        WritableRaster outputRaster = output.getRaster();
+
+        int[] pixelE = new int[3]; // Střední pixel (RGB)
+        int[] pixelA = new int[3]; // Horní pixel
+        int[] pixelB = new int[3]; // Pravý pixel
+        int[] pixelC = new int[3]; // Levý pixel
+        int[] pixelD = new int[3]; // Dolní pixel
+
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int E = input.getRGB(x, y); // Aktuální pixel
-                int A = (y > 0) ? input.getRGB(x, y - 1) : E; // Horní pixel
-                int B = (x < width - 1) ? input.getRGB(x + 1, y) : E; // Pravý pixel
-                int C = (x > 0) ? input.getRGB(x - 1, y) : E; // Levý pixel
-                int D = (y < height - 1) ? input.getRGB(x, y + 1) : E; // Dolní pixel
+                // Načtení aktuálního pixelu
+                inputRaster.getPixel(x, y, pixelE);
+
+                // Načtení okolních pixelů (nebo aktuálního, pokud není soused)
+                inputRaster.getPixel(x, Math.max(0, y - 1), pixelA); // Horní pixel
+                inputRaster.getPixel(Math.min(width - 1, x + 1), y, pixelB); // Pravý pixel
+                inputRaster.getPixel(Math.max(0, x - 1), y, pixelC); // Levý pixel
+                inputRaster.getPixel(x, Math.min(height - 1, y + 1), pixelD); // Dolní pixel
 
                 // Každý pixel se zvětší na (scale x scale) čtverec
                 for (int dy = 0; dy < scale; dy++) {
                     for (int dx = 0; dx < scale; dx++) {
                         if (dy == 0 && dx == 0) {
-                            output.setRGB(x * scale + dx, y * scale + dy, (A == C && A != D && C != B) ? A : E);
+                            setPixel(outputRaster, x * scale + dx, y * scale + dy, (equals(pixelA, pixelC) && !equals(pixelA, pixelD) && !equals(pixelC, pixelB)) ? pixelA : pixelE);
                         } else if (dy == 0 && dx == scale - 1) {
-                            output.setRGB(x * scale + dx, y * scale + dy, (A == B && A != D && B != C) ? B : E);
+                            setPixel(outputRaster, x * scale + dx, y * scale + dy, (equals(pixelA, pixelB) && !equals(pixelA, pixelD) && !equals(pixelB, pixelC)) ? pixelB : pixelE);
                         } else if (dy == scale - 1 && dx == 0) {
-                            output.setRGB(x * scale + dx, y * scale + dy, (D == C && D != A && C != B) ? C : E);
+                            setPixel(outputRaster, x * scale + dx, y * scale + dy, (equals(pixelD, pixelC) && !equals(pixelD, pixelA) && !equals(pixelC, pixelB)) ? pixelC : pixelE);
                         } else if (dy == scale - 1 && dx == scale - 1) {
-                            output.setRGB(x * scale + dx, y * scale + dy, (D == B && D != A && B != C) ? D : E);
+                            setPixel(outputRaster, x * scale + dx, y * scale + dy, (equals(pixelD, pixelB) && !equals(pixelD, pixelA) && !equals(pixelB, pixelC)) ? pixelD : pixelE);
                         } else {
-                            output.setRGB(x * scale + dx, y * scale + dy, E); // Střední část
+                            setPixel(outputRaster, x * scale + dx, y * scale + dy, pixelE); // Střední část
                         }
                     }
                 }
@@ -192,7 +207,16 @@ public class Screen extends javax.swing.JPanel {
 
         return output;
     }
-  
+
+// Nastaví pixel do rastru
+    private void setPixel(WritableRaster raster, int x, int y, int[] pixel) {
+        raster.setPixel(x, y, pixel);
+    }
+
+// Porovná, zda dva pixely jsou stejné
+    private boolean equals(int[] pixel1, int[] pixel2) {
+        return pixel1[0] == pixel2[0] && pixel1[1] == pixel2[1] && pixel1[2] == pixel2[2];
+    }
 
 // Metoda pro přidání prokládání (scanlines)
     private void addScanlines(Graphics2D g2d, int offsetX, int offsetY, int width, int height) {
