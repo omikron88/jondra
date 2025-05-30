@@ -76,7 +76,13 @@ public class Ondra extends Thread
 
     public boolean bAutoRunAfterReset = false;
 
+    private final byte[] snapshotBuffer;
+    public int memorySize = 42 + 0x10000; // Velikost paměti (pro ulozeni registru a pameti)
+    public int maxRecords = 500000; // Maximální počet záznamů ve frontě
+    public int snapshotInterval = 100; // Interval pro pravidelné keyframy
+
     public Ondra() {
+        snapshotBuffer = new byte[memorySize]; // Alokace bufferu při inicializaci
         img = new BufferedImage(320, 256, BufferedImage.TYPE_BYTE_BINARY);
         px = ((DataBufferByte) img.getRaster().getDataBuffer()).getBankData()[0];
         cfg = new Config();
@@ -124,11 +130,17 @@ public class Ondra extends Thread
     public Debugger getDebugger() {
         return deb;
     }
+    
+    public Keyboard getKeyboard() {
+        return key;
+    }
 
     public void setConfig(Config c) {
         if (!cfg.equals(c)) {
             cfg = c;
+            stopEmulation();
             Reset(false);
+            startEmulation();
         }
     }
 
@@ -142,11 +154,7 @@ public class Ondra extends Thread
 
     public BufferedImage getImage() {
         return img;
-    }
-
-    public Keyboard getKeyboard() {
-        return key;
-    }
+    }    
 
     public void setGreenLed(JLabel led) {
         GreenLed = led;
@@ -177,11 +185,13 @@ public class Ondra extends Thread
         nDMAStatus = 0;
         t_resolution_correct = 0;
         t_frame = T_DMAOFF;
+        cpu.timeline.clearTimeline();
         mem.Reset(dirty);
         mem.mapRom(true);
         clk.reset();
         cpu.reset();
         key.Reset();
+
         nRozliseni = 255;
         genDispTables();
         tapestart = false;
@@ -243,7 +253,6 @@ public class Ondra extends Thread
             task.cancel();
             task = null;
         }
-
     }
 
     public boolean isPaused() {
@@ -317,7 +326,6 @@ public class Ondra extends Thread
             cpu.setBreakpoint(frame.nStartAddress, true);
             bAutoRunAfterReset = true;
         }
-
     }
 
     public void StartArgumentImage(boolean bAutoStart) {
@@ -353,21 +361,24 @@ public class Ondra extends Thread
         int x = dispAdr[address - 0xd800];
         if (x != -1 && dmaEnabled) {
             px[x] = mem.readRam(address);
-            //    scr.repaint(x % 40, x / 40, 8, 1);
+            
         }
     }
-
+    
     private void dmaEnable() {
+        
         for (int address = 0xd800; address < 0x10000; address++) {
             int x = dispAdr[address - 0xd800];
             if (x != -1) {
                 px[x] = mem.readRam(address);
             }
         }
+        
         dmaEnabled = true;
     }
 
     private void dmaDisable() {
+        
         dmaEnabled = false;
         for (int address = 0xd800; address < 0x10000; address++) {
             int x = dispAdr[address - 0xd800];
@@ -375,6 +386,7 @@ public class Ondra extends Thread
                 px[x] = 0;
             }
         }
+        
     }
 
     @Override
@@ -387,11 +399,20 @@ public class Ondra extends Thread
 
     @Override
     public int peek8(int address) {
-        clk.addTstates(3);
-        int value = mem.readByte(address) & 0xff;
-        //      if (address==0xFF08) {
-        //       System.out.println(String.format("Peek[%d][%d]: %04X,%02X (%04X)", address >>> 11,address & 2047,address,value,cpu.getRegPC()));            
-        //     }
+        int value = 0;
+        boolean bExe = true;
+
+        if (utils.Config.bBP7) {
+            //memoryread BP
+            if (utils.Config.nBP7Address == address) {
+                cpu.bMemBPR = true; //ukonci provadeni instrukci
+                bExe = false;
+            }
+        }
+        if (bExe) {
+            clk.addTstates(3);
+            value = mem.readByte(address) & 0xff;            
+        }
         return value;
     }
 
@@ -403,10 +424,6 @@ public class Ondra extends Thread
         if (utils.Config.bBP6) {
             //memorywrite BP
             if (utils.Config.nBP6Address == address) {
-                stopEmulation();
-                int bpAdd = cpu.getRegPC() - 1;
-                cpu.setRegPC(bpAdd);
-                getDebugger().showDialog();
                 cpu.bMemBP = true; //ukonci provadeni instrukci
                 bExe = false;
             }
@@ -414,23 +431,22 @@ public class Ondra extends Thread
         if (bExe) {
             clk.addTstates(3);
             mem.writeByte(address, (byte) value);
+            cpu.timeline.addChange(address, (byte) value);
         }
     }
 
     @Override
     public int peek16(int address) {
-        clk.addTstates(6);
-        int lsb = mem.readByte(address) & 0xff;
+        int lsb = peek8(address) & 0xff;
         address = (address + 1) & 0xffff;
-        return ((mem.readByte(address) << 8) & 0xff00 | lsb);
+        return ((peek8(address) << 8) & 0xff00 | lsb);
     }
 
     @Override
     public void poke16(int address, int word) {
-        clk.addTstates(6);
-        mem.writeByte(address, (byte) word);
+        poke8(address, (byte) word);
         address = (address + 1) & 0xffff;
-        mem.writeByte(address, (byte) (word >>> 8));
+        poke8(address, (byte) (word >>> 8));
     }
 
     @Override
@@ -464,13 +480,23 @@ public class Ondra extends Thread
     }
 
     @Override
-    public void outPort(int port, int value) {
+    public void outPort(int port, int value) {        
         clk.addTstates(4);
         port &= 0xff;
         value &= 0xff;
-//        System.out.println(String.format("Out: %02X,%02X (%04X)", port,value,cpu.getRegPC()));
+  //      System.out.println(String.format("PC=%04X,out(%02X),%02X", cpu.getRegPC(),port,value));
         if ((port & 0x08) == 0) {
             portA3 = (byte) value;
+             if ((portA3 & 0x02) == 0) {
+                mem.mapRom(true);
+            } else {
+                mem.mapRom(false);
+            }
+            if ((portA3 & 0x04) == 0) {
+                mem.mapIO(false);
+            } else {
+                mem.mapIO(true);
+            }
             if ((portA3 & 0x01) == 0) {
                 t_frame = T_DMAOFF;
                 nDMAStatus = 0;
@@ -481,17 +507,7 @@ public class Ondra extends Thread
                 nDMAStatus = 1;
                 dmaEnable();
                 scr.repaint();
-            }
-            if ((portA3 & 0x02) == 0) {
-                mem.mapRom(true);
-            } else {
-                mem.mapRom(false);
-            }
-            if ((portA3 & 0x04) == 0) {
-                mem.mapIO(false);
-            } else {
-                mem.mapIO(true);
-            }
+            }           
 
         }
         if ((port & 0x01) == 0) {
@@ -796,6 +812,234 @@ public class Ondra extends Thread
             System.out.println(String.format("%s: %s", msg, filename));
             //Logger.getLogger(Spectrum.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    public final byte[] saveSnapshotToArray() {
+
+        int index = 0;
+
+        Z80State state = cpu.getZ80State();
+
+        try {
+            // Uložení stavu registrů
+            snapshotBuffer[index++] = (byte) state.getRegI();
+            snapshotBuffer[index++] = (byte) state.getRegLx();
+            snapshotBuffer[index++] = (byte) state.getRegHx();
+            snapshotBuffer[index++] = (byte) state.getRegEx();
+            snapshotBuffer[index++] = (byte) state.getRegDx();
+            snapshotBuffer[index++] = (byte) state.getRegCx();
+            snapshotBuffer[index++] = (byte) state.getRegBx();
+            snapshotBuffer[index++] = (byte) state.getRegFx();
+            snapshotBuffer[index++] = (byte) state.getRegAx();
+            snapshotBuffer[index++] = (byte) state.getRegL();
+            snapshotBuffer[index++] = (byte) state.getRegH();
+            snapshotBuffer[index++] = (byte) state.getRegE();
+            snapshotBuffer[index++] = (byte) state.getRegD();
+            snapshotBuffer[index++] = (byte) state.getRegC();
+            snapshotBuffer[index++] = (byte) state.getRegB();
+
+            snapshotBuffer[index++] = (byte) (state.getRegIY() & 0xff);
+            snapshotBuffer[index++] = (byte) ((state.getRegIY() >>> 8) & 0xff);
+            snapshotBuffer[index++] = (byte) (state.getRegIX() & 0xff);
+            snapshotBuffer[index++] = (byte) ((state.getRegIX() >>> 8) & 0xff);
+
+            int tmp = 0;
+            if (state.isIFF1()) {
+                tmp |= 1;
+            }
+            if (state.isIFF2()) {
+                tmp |= 2;
+            }
+            if (state.isPendingEI()) {
+                tmp |= 4;
+            }
+            if (state.isNMI()) {
+                tmp |= 8;
+            }
+            if (state.isINTLine()) {
+                tmp |= 16;
+            }
+            if (state.isHalted()) {
+                tmp |= 32;
+            }
+            if (dmaEnabled) {
+                tmp |= 64;
+            }
+            if (nDMAStatus == 1) {
+                tmp |= 128;
+            }
+            snapshotBuffer[index++] = (byte) tmp;
+
+            snapshotBuffer[index++] = (byte) state.getRegR();
+            snapshotBuffer[index++] = (byte) state.getRegF();
+            snapshotBuffer[index++] = (byte) state.getRegA();
+
+            snapshotBuffer[index++] = (byte) (state.getRegSP() & 0xff);
+            snapshotBuffer[index++] = (byte) ((state.getRegSP() >>> 8) & 0xff);
+
+            snapshotBuffer[index++] = (byte) (state.getRegPC() & 0xff);
+            snapshotBuffer[index++] = (byte) ((state.getRegPC() >>> 8) & 0xff);
+
+            switch (state.getIM()) {
+                case IM0:
+                    snapshotBuffer[index++] = 0;
+                    break;
+                case IM1:
+                    snapshotBuffer[index++] = 1;
+                    break;
+                case IM2:
+                    snapshotBuffer[index++] = 2;
+                    break;
+            }
+
+            snapshotBuffer[index++] = (byte) (state.getMemPtr() & 0xff);
+            snapshotBuffer[index++] = (byte) ((state.getMemPtr() >>> 8) & 0xff);
+
+            snapshotBuffer[index++] = (byte) portA0;
+            snapshotBuffer[index++] = (byte) portA1;
+            snapshotBuffer[index++] = (byte) portA3;
+
+            snapshotBuffer[index++] = (byte) nRozliseni;
+            //ulozim t-states
+            long lTstates = cpu.clock.getTstates();
+
+            for (int i = 7; i >= 0; i--) {
+                snapshotBuffer[index + i] = (byte) (lTstates & 0xFF);
+                lTstates >>= 8;
+            }
+            index += 8;
+            // Přímé kopírování RAM        
+            byte[][] ramPages = mem.getRamPages();
+            for (int page = 0; page < ramPages.length; page++) {
+                System.arraycopy(ramPages[page], 0, snapshotBuffer, index, mem.PAGE_SIZE);
+                index += mem.PAGE_SIZE;
+            }
+
+            return snapshotBuffer;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.err.println("Error: Index out of bounds at index: " + index);
+            throw e;
+        }
+    }
+
+    public final void loadSnapshotFromArray(byte[] snapshot) {
+        int index = 0;
+
+        // Reset VRAM
+        /*
+        nRozliseni = 255;
+        changeResolution();
+        for (int i = 0; i < 0x10000; i++) {
+            mem.writeByte(i, (byte) 0);
+        }
+         */
+        //Arrays.fill(dispAdr, -1);
+       // Arrays.fill(px, (byte) 0);
+
+        Z80State state = new Z80State();
+
+        // Načtení stavu registrů
+        state.setRegI(snapshot[index++]);
+        state.setRegLx(snapshot[index++]);
+        state.setRegHx(snapshot[index++]);
+        state.setRegEx(snapshot[index++]);
+        state.setRegDx(snapshot[index++]);
+        state.setRegCx(snapshot[index++]);
+        state.setRegBx(snapshot[index++]);
+        state.setRegFx(snapshot[index++]);
+        state.setRegAx(snapshot[index++]);
+        state.setRegL(snapshot[index++]);
+        state.setRegH(snapshot[index++]);
+        state.setRegE(snapshot[index++]);
+        state.setRegD(snapshot[index++]);
+        state.setRegC(snapshot[index++]);
+        state.setRegB(snapshot[index++]);
+
+        int tmp = snapshot[index++] & 0xff | ((snapshot[index++] & 0xff) << 8);
+        state.setRegIY(tmp);
+
+        tmp = snapshot[index++] & 0xff | ((snapshot[index++] & 0xff) << 8);
+        state.setRegIX(tmp);
+
+        tmp = snapshot[index++];
+        state.setIFF1((tmp & 1) != 0);
+        state.setIFF2((tmp & 2) != 0);
+        state.setPendingEI((tmp & 4) != 0);
+        state.setNMI((tmp & 8) != 0);
+        state.setINTLine((tmp & 16) != 0);
+        state.setHalted((tmp & 32) != 0);
+        dmaEnabled = (tmp & 64) != 0;
+        if ((tmp & 128) != 0) {
+            nDMAStatus = 1;
+        } else {
+            nDMAStatus = 0;
+        }
+
+        state.setRegR(snapshot[index++]);
+        state.setRegF(snapshot[index++]);
+        state.setRegA(snapshot[index++]);
+
+        tmp = snapshot[index++] & 0xff | ((snapshot[index++] & 0xff) << 8);
+        state.setRegSP(tmp);
+
+        tmp = snapshot[index++] & 0xff | ((snapshot[index++] & 0xff) << 8);
+        state.setRegPC(tmp);
+
+        switch (snapshot[index++]) {
+            case 0:
+                state.setIM(Z80.IntMode.IM0);
+                break;
+            case 1:
+                state.setIM(Z80.IntMode.IM1);
+                break;
+            case 2:
+                state.setIM(Z80.IntMode.IM2);
+                break;
+        }
+
+        tmp = snapshot[index++] & 0xff | ((snapshot[index++] & 0xff) << 8);
+        state.setMemPtr(tmp);
+
+        cpu.setZ80State(state);
+        
+        boolean dmaEnabledBckp=dmaEnabled;
+        if (dmaEnabled) {
+            dmaEnable();
+        } else {
+            dmaDisable();
+        }
+
+        outPort(0x0e, snapshot[index++]);
+        outPort(0x0d, snapshot[index++]);
+        outPort(0x03, snapshot[index++]);
+
+        nRozliseni = snapshot[index++] & 0xff;
+        
+
+        long lTstates = 0;
+        for (int i = 0; i < 8; i++) {
+            lTstates = (lTstates << 8) | (snapshot[index++] & 0xFF);
+        }
+        cpu.clock.setTstates(lTstates);
+
+        // Načtení celé paměti RAM
+        for (int addr = 0; addr < 0x10000; addr++) {
+            mem.writeByte(addr, snapshot[index++]);
+        }
+        int nDMAStatusBkp=nDMAStatus;
+        dmaEnable();
+        nDMAStatus=1;
+        changeResolution();
+        genDispTables();
+        for (int i = 0xd800; i < 0x10000; i++) {
+            processVram(i);
+        }
+        if (dmaEnabledBckp) {
+            dmaEnable();            
+        } else {
+            dmaDisable();
+        }
+        nDMAStatus=nDMAStatusBkp;
     }
 
     private void cpu_debug(String prefix) {

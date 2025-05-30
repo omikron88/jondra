@@ -39,8 +39,11 @@ public class Config {
     public static int nBP5Address = 0;
     public static boolean bBP6 = false;
     public static int nBP6Address = 0;
+    public static boolean bBP7 = false;
+    public static int nBP7Address = 0;
     public static int nMemAddress = 0;
     public static boolean bShowCode = false;
+    public static boolean bEnableTimeline = false;
     public static boolean bAudio = true;
     public static boolean bMelodik = true;
     public static boolean bFullscreen = false;
@@ -89,8 +92,11 @@ public class Config {
         prop.setProperty("BP5ADDRESS", String.valueOf(nBP5Address));
         prop.setProperty("BP6CHCK", String.valueOf(bBP6));
         prop.setProperty("BP6ADDRESS", String.valueOf(nBP6Address));
+        prop.setProperty("BP7CHCK", String.valueOf(bBP7));
+        prop.setProperty("BP7ADDRESS", String.valueOf(nBP7Address));
         prop.setProperty("MEMADDRESS", String.valueOf(nMemAddress));
         prop.setProperty("BSHOWCODE", String.valueOf(bShowCode));
+        prop.setProperty("BTIMELINE", String.valueOf(bEnableTimeline));
         prop.setProperty("AUDIO", String.valueOf(bAudio));
         prop.setProperty("MELODIK", String.valueOf(bMelodik));
         prop.setProperty("FULLSCREEN", String.valueOf(bFullscreen));
@@ -193,8 +199,11 @@ public class Config {
         nBP5Address = parseIntSafe(prop.getProperty("BP5ADDRESS"), 0);
         bBP6 = parseBooleanSafe(prop.getProperty("BP6CHCK"), false);
         nBP6Address = parseIntSafe(prop.getProperty("BP6ADDRESS"), 0);
+        bBP7 = parseBooleanSafe(prop.getProperty("BP7CHCK"), false);
+        nBP7Address = parseIntSafe(prop.getProperty("BP7ADDRESS"), 0);
         nMemAddress = parseIntSafe(prop.getProperty("MEMADDRESS"), 0);
-        bShowCode = parseBooleanSafe(prop.getProperty("BSHOWCODE"), false);
+        bShowCode = parseBooleanSafe(prop.getProperty("BSHOWCODE"), false);        
+        bEnableTimeline = parseBooleanSafe(prop.getProperty("BTIMELINE"), false);        
         bAudio = parseBooleanSafe(prop.getProperty("AUDIO"), true);
         bMelodik = parseBooleanSafe(prop.getProperty("MELODIK"), true);
         bFullscreen = parseBooleanSafe(prop.getProperty("FULLSCREEN"), false);

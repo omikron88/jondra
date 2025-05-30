@@ -727,7 +727,7 @@ public class Z80Dis {
       case 0x40: s=s+String.format("IN B,(C)"); break;
       case 0x41: s=s+String.format("OUT (C),B"); break;
       case 0x42: s=s+String.format("SBC HL,BC"); break;
-      case 0x43: s=s+String.format("LD (#%02X%02X),BC",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x43: s=s+String.format("LD (#%02X%02X),BC",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x44: s=s+String.format("NEG"); break;
       case 0x45: s=s+String.format("RETN"); break;
       case 0x46: s=s+String.format("IM 0"); break;
@@ -735,7 +735,7 @@ public class Z80Dis {
       case 0x48: s=s+String.format("IN C,(C)"); break;
       case 0x49: s=s+String.format("OUT (C),C"); break;
       case 0x4A: s=s+String.format("ADC (HL),BC"); break;
-      case 0x4B: s=s+String.format("LD BC,(#%02X%02X)",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x4B: s=s+String.format("LD BC,(#%02X%02X)",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x4C: s=s+String.format("NEG"); break;
       case 0x4D: s=s+String.format("RETI"); break;
       case 0x4E: s=s+String.format("IM 0/1"); break;
@@ -744,7 +744,7 @@ public class Z80Dis {
       case 0x50: s=s+String.format("IN D,(C)"); break;
       case 0x51: s=s+String.format("OUT (C),D"); break;
       case 0x52: s=s+String.format("SBC HL,DE"); break;
-      case 0x53: s=s+String.format("LD (#%02X%02X),DE",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x53: s=s+String.format("LD (#%02X%02X),DE",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x54: s=s+String.format("NEG"); break;
       case 0x55: s=s+String.format("RETN"); break;
       case 0x56: s=s+String.format("IM 1"); break;
@@ -752,7 +752,8 @@ public class Z80Dis {
       case 0x58: s=s+String.format("IN E,(C)"); break;
       case 0x59: s=s+String.format("OUT (C),E"); break;
       case 0x5A: s=s+String.format("ADC (HL),DE"); break;
-      case 0x5B: s=s+String.format("LD DE,(#%02X%02X)",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+
+      case 0x5B: s=s+String.format("LD DE,(#%02X%02X)",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x5C: s=s+String.format("NEG"); break;
       case 0x5D: s=s+String.format("RETN"); break;
       case 0x5E: s=s+String.format("IM 2"); break;
@@ -761,7 +762,7 @@ public class Z80Dis {
       case 0x60: s=s+String.format("IN H,(C)"); break;
       case 0x61: s=s+String.format("OUT (C),H"); break;
       case 0x62: s=s+String.format("SBC HL,HL"); break;
-      case 0x63: s=s+String.format("LD (#%02X%02X),HL",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x63: s=s+String.format("LD (#%02X%02X),HL",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x64: s=s+String.format("NEG"); break;
       case 0x65: s=s+String.format("RETN"); break;
       case 0x66: s=s+String.format("IM 0"); break;
@@ -769,7 +770,7 @@ public class Z80Dis {
       case 0x68: s=s+String.format("IN L,(C)"); break;
       case 0x69: s=s+String.format("OUT (C),L"); break;
       case 0x6A: s=s+String.format("ADC (HL),HL"); break;
-      case 0x6B: s=s+String.format("LD HL,(#%02X%02X)",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x6B: s=s+String.format("LD HL,(#%02X%02X)",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x6C: s=s+String.format("NEG"); break;
       case 0x6D: s=s+String.format("RETN"); break;
       case 0x6E: s=s+String.format("IM 0/1"); break;
@@ -778,7 +779,7 @@ public class Z80Dis {
       case 0x70: s=s+String.format("IN (C)"); break;
       case 0x71: s=s+String.format("OUT (C),0"); break;
       case 0x72: s=s+String.format("SBC HL,SP"); break;
-      case 0x73: s=s+String.format("LD (#%02X%02X),SP",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x73: s=s+String.format("LD (#%02X%02X),SP",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x74: s=s+String.format("NEG"); break;
       case 0x75: s=s+String.format("RETN"); break;
       case 0x76: s=s+String.format("IM 1"); break;
@@ -786,7 +787,7 @@ public class Z80Dis {
       case 0x78: s=s+String.format("IN A,(C)"); break;
       case 0x79: s=s+String.format("OUT (C),A"); break;
       case 0x7A: s=s+String.format("ADC (HL),SP"); break;
-      case 0x7B: s=s+String.format("LD SP,(#%02X%02X)",Opcodes[pc+2],Opcodes[pc+1]); inst_bytes=4; break;
+      case 0x7B: s=s+String.format("LD SP,(#%02X%02X)",Opcodes[pc+3],Opcodes[pc+2]); inst_bytes=4; break;
       case 0x7C: s=s+String.format("NEG"); break;
       case 0x7D: s=s+String.format("RETN"); break;
       case 0x7E: s=s+String.format("IM 2"); break;

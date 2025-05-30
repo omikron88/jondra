@@ -27,8 +27,8 @@ public class Screen extends javax.swing.JPanel {
     private boolean scanlines = false; // Výchozí režim: no scanlines
     private BufferedImage image;
 
-    private AffineTransform tr;
-    private AffineTransformOp trOp;
+    //private AffineTransform tr;
+    //private AffineTransformOp trOp;
     private RenderingHints rHints;
 
     public void setScanlines(boolean bScan) {
@@ -69,25 +69,22 @@ public class Screen extends javax.swing.JPanel {
     public Screen() {
         initComponents();
 
+        // Nastavení počátečních hodnot
         image = null;
 
-        tr = AffineTransform.getScaleInstance(2.0f, 2.0f);
+        // AffineTransform je potřeba dynamicky nastavovat, proto jej nemusíme inicializovat zde
+//    tr = null;
+        // Nastavení RenderingHints s důrazem na rychlost
+        rHints = new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
+        rHints.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        rHints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        rHints.put(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
 
-        rHints = new RenderingHints(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        rHints.put(RenderingHints.KEY_RENDERING,
-                RenderingHints.VALUE_RENDER_SPEED);
-        rHints.put(RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_OFF);
-        rHints.put(RenderingHints.KEY_COLOR_RENDERING,
-                RenderingHints.VALUE_COLOR_RENDER_SPEED);
-
-        trOp = new AffineTransformOp(tr, rHints);
-
+        // Nastavení výchozích rozměrů panelu
         setMinimumSize(new Dimension(640, 512));
         setMaximumSize(new Dimension(640, 512));
         setPreferredSize(new Dimension(640, 512));
-    } // constructor
+    }// constructor
 
     public void setImage(BufferedImage img) {
         image = img;
@@ -95,55 +92,57 @@ public class Screen extends javax.swing.JPanel {
 
     @Override
     public void paintComponent(Graphics gc) {
+        super.paintComponent(gc);
         Graphics2D g2d = (Graphics2D) gc;
-
+        // Aplikace RenderingHints pro zajištění optimalizace
+        g2d.setRenderingHints(rHints);
         // Vyplnění pozadí černou barvou
         g2d.setColor(Color.BLACK);
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
         if (image != null) {
-            // Rozměry panelu
             int panelWidth = getWidth();
             int panelHeight = getHeight();
-
-            // Rozměry obrazu
             int imageWidth = image.getWidth();
             int imageHeight = image.getHeight();
 
-            BufferedImage scaledImage = null;
+            BufferedImage scaledImage = image; // Výchozí obraz, pokud není ScaleNx aktivní
             int renderWidth, renderHeight;
-            int offsetX, offsetY;
 
             if (fullscreenMode && scaleNx) {
-                // Použij ScaleNx algoritmus                
+                // Použití ScaleNx pro zvětšení
                 scaledImage = applyScaleNx(image, panelWidth, panelHeight);
                 renderWidth = scaledImage.getWidth();
                 renderHeight = scaledImage.getHeight();
-            } else if (fullscreenMode) {
-                // Fullscreen režim s klasickým škálováním
+            } else {
+                // Standardní škálování s využitím AffineTransform
                 double scaleX = (double) panelWidth / imageWidth;
                 double scaleY = (double) panelHeight / imageHeight;
-                double scale = Math.min(scaleX, scaleY); // Zachovat poměr stran
+                double scale = Math.min(scaleX, scaleY);
 
                 renderWidth = (int) (imageWidth * scale);
                 renderHeight = (int) (imageHeight * scale);
-                scaledImage = image;
-            } else {
-                // Normální režim s pevně nastaveným ratio
-                renderWidth = imageWidth * ratio;
-                renderHeight = imageHeight * ratio;
-                scaledImage = image;
+
+                // Použití AffineTransform pro akcelerované škálování
+                AffineTransform transform = AffineTransform.getTranslateInstance(
+                        (panelWidth - renderWidth) / 2.0,
+                        (panelHeight - renderHeight) / 2.0
+                );
+                transform.scale(scale, scale);
+
+                // Vykreslení obrazu s transformací
+                g2d.drawImage(image, transform, null);
             }
 
-            // Vypočítání odsazení pro centrování obrazu
-            offsetX = (panelWidth - renderWidth) / 2;
-            offsetY = (panelHeight - renderHeight) / 2;
-
-            // Vykreslení výsledného obrazu
-            g2d.drawImage(scaledImage, offsetX, offsetY, renderWidth, renderHeight, null);
+            if (fullscreenMode && scaleNx) {
+                // Pokud byl použit ScaleNx, vykreslíme obraz přímo
+                int offsetX = (panelWidth - renderWidth) / 2;
+                int offsetY = (panelHeight - renderHeight) / 2;
+                g2d.drawImage(scaledImage, offsetX, offsetY, null);
+            }
 
             if (fullscreenMode && scanlines) {
-                addScanlines(g2d, offsetX, offsetY, renderWidth, renderHeight);
+                addScanlines(g2d, (panelWidth - renderWidth) / 2, (panelHeight - renderHeight) / 2, renderWidth, renderHeight);
             }
         }
     }
@@ -219,11 +218,25 @@ public class Screen extends javax.swing.JPanel {
     }
 
 // Metoda pro přidání prokládání (scanlines)
-    private void addScanlines(Graphics2D g2d, int offsetX, int offsetY, int width, int height) {
+    private BufferedImage scanlinePattern;
+
+    private void generateScanlinePattern(int width, int height) {
+        scanlinePattern = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = scanlinePattern.createGraphics();
+
         g2d.setColor(new Color(0, 0, 0, 50)); // Tmavá barva s průhledností
-        for (int y = offsetY; y < offsetY + height; y += 4) { // Čáry každé 4 pixely
-            g2d.fillRect(offsetX, y, width, 2); // Čára o výšce 2 pixelů
+        for (int y = 0; y < height; y += 4) { // Čáry každé 4 pixely
+            g2d.fillRect(0, y, width, 2); // Čára o výšce 2 pixelů
         }
+
+        g2d.dispose();
+    }
+
+    private void addScanlines(Graphics2D g2d, int offsetX, int offsetY, int width, int height) {
+        if (scanlinePattern == null || scanlinePattern.getWidth() != width || scanlinePattern.getHeight() < height) {
+            generateScanlinePattern(width, height);
+        }
+        g2d.drawImage(scanlinePattern, offsetX, offsetY, null);
     }
 
     /**

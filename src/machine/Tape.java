@@ -30,6 +30,7 @@ public class Tape implements ClockTimeoutListener {
     private enum st {CLOSE, CSW, WAV, TAP};
     private st lst, sst;
     private boolean record;
+    private StringBuilder bitDump = new StringBuilder();
     
     public Tape(Ondra machine) {
         m = machine;
@@ -139,8 +140,11 @@ public class Tape implements ClockTimeoutListener {
                        }
                     } else {
                         m.clk.setTimeout(lrate);
-                        m.mem.setTapeIn(ltap.generateFrame());
-                    }                                                    
+                        // Uložíme bit do bitDump
+                        int sampleValue = ltap.generateFrame() ? 1 : 0;
+                        bitDump.append(sampleValue != 0 ? '1' : '0');
+                        m.mem.setTapeIn(sampleValue == 1 ? true : false);
+                    }                                               
                     break;
                 }
                 

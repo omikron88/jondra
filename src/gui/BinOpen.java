@@ -268,6 +268,7 @@ public class BinOpen extends javax.swing.JFrame {
   
 
     private void jButtonOKActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonOKActionPerformed
+         m.startEmulation();
         BufferedInputStream fIn;
         if (Config.bAllRam) {
             m.mem.mapRom(false);

@@ -10,6 +10,8 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Toolkit;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -58,16 +60,20 @@ public class JOndra extends javax.swing.JFrame {
      */
     public JOndra(String args[]) {
 
+        // Nastavení domovské složky
         strHomeDirectory = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
         if (strHomeDirectory.contains("/")) {
             int pos = strHomeDirectory.lastIndexOf("/");
             strHomeDirectory = strHomeDirectory.substring(0, pos);
         }
 
+        // Zpracování argumentů příkazové řádky
         if (args.length > 0) {
             if (args.length == 1) {
+                //pouze nazev souboru pro nahrati
                 strArgFile = args[0];
             } else if (args.length == 2) {
+                //nejen nazev souboru pro nahrati, ale i adresa do ktere ma emulator dobehnout, nez soubor nahraje a spusti (napr. po inicializaci ROM)
                 strArgFile = args[0];
                 nStartAddress = -1;
                 try {
@@ -80,23 +86,39 @@ public class JOndra extends javax.swing.JFrame {
                 } catch (Exception ex) {
                     nStartAddress = -1;
                 }
-
             }
         }
+
+        // Načtení konfigurace
         Config.LoadConfig();
+
+        // Inicializace komponent GUI
         initComponents();
+
+        // Nastavení ikony aplikace
         setIconImage((new ImageIcon(getClass().getResource("/icons/ondra.png")).getImage()));
-        //presun polozky menu About doprava
+
+        // Přesun položky menu "About" doprava
         jMenuBar1.remove(jAbout);
         jMenuBar1.add(Box.createHorizontalGlue());
         jMenuBar1.add(jAbout);
 
+        // Inicializace emulátoru a obrazovky
         initEmulator();
-        // Nastavení výchozího režimu
+
+        // Správné nastavení velikosti okna na základě obsahu obrazovky
+        updateWindowSize();
+
+        // Nastavení fullscreen režimu, pokud je zapnutý v konfiguraci
         setFullscreen(Config.bFullscreen);
+
+        // Aplikace dalších nastavení obrazovky
         scr.setScanlines(Config.bScanlines);
         scr.setScaleNx(Config.bScaleNx);
-        // Přidání KeyListeneru pro zachycení F11        
+        scr.revalidate();
+        scr.repaint();
+
+        // Přidání KeyListeneru pro zachycení klávesy F12 (přepnutí fullscreen režimu)
         addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyPressed(java.awt.event.KeyEvent evt) {
@@ -108,43 +130,44 @@ public class JOndra extends javax.swing.JFrame {
             }
         });
 
+        // Přidání listeneru pro získání/ztrátu focusu okna
+        this.addWindowFocusListener(new WindowFocusListener() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                m.getKeyboard().setKeyboardEnabled(true);  // Povolit klávesnici Ondry, když se vrátíme do emulátoru
+            }
+
+            @Override
+            public void windowLostFocus(WindowEvent e) {
+                m.getKeyboard().setKeyboardEnabled(false); // Vypnout klávesnici Ondry, když přepneme na jiné okno, například debugger
+            }
+        });
+
+        // Zobrazení hlavního okna
+        pack(); // Přizpůsobení velikosti okna obsahu
+        setLocationRelativeTo(null); // Centrovat okno na obrazovce
+        setVisible(true); // Zobrazit okno
     }
 
     public void updateWindowSize() {
-        if (!scr.getFullscreenStatus()) {
-            int ratio = scr.getRatio();
-            BufferedImage image = scr.getImage();
-            int imageWidth = image.getWidth() * ratio;
-            int imageHeight = image.getHeight() * ratio;
-
-            // Získání dekorací okna
-            Insets insets = getInsets();
-            int decorWidth = insets.left + insets.right;
-            int decorHeight = insets.top + insets.bottom;
-
-            if (ToolBar.isVisible()) {
-                decorHeight += ToolBar.getHeight();
-            }
-            if (jMenuBar1.isVisible()) {
-                decorHeight += jMenuBar1.getHeight();
-            }
-            if (statusPanel.isVisible()) {
-                decorHeight += statusPanel.getHeight();
-            }
-            // Nastavení velikosti okna na základě obrazu + dekorací
-            int frameWidth = imageWidth + decorWidth;
-            int frameHeight = imageHeight + decorHeight;
-
-            // Nastavení velikosti okna
-            setSize(frameWidth, frameHeight);
-
-            // Centrovat okno na obrazovce
-            setLocationRelativeTo(null);
-
-            // Zajištění, že panel `Screen` bude mít stejnou velikost jako obraz
-            scr.setPreferredSize(new Dimension(imageWidth, imageHeight));
-            scr.revalidate();
+        if (bFullscreen) {
+            return; // Ve fullscreen režimu neprováděj změny
         }
+
+        int ratio = scr.getRatio(); // Ujisti se, že ratio je správné
+        BufferedImage image = scr.getImage();
+        int imageWidth = image.getWidth() * ratio;
+        int imageHeight = image.getHeight() * ratio;
+
+        // Oprava: Pokud se změnilo ratio, znovu ho nastav
+        scr.setPreferredSize(new Dimension(imageWidth, imageHeight));
+        scr.revalidate();
+
+        // Přizpůsobení velikosti okna obsahu
+        pack();
+        
+        scr.setPreferredSize(new Dimension(imageWidth, imageHeight));
+        scr.revalidate();
     }
 
     public void setFullscreen(boolean fullscreenMode) {
@@ -152,31 +175,25 @@ public class JOndra extends javax.swing.JFrame {
         scr.setFullScreen(fullscreenMode); // Nastavení fullscreen statusu v komponentě obrazovky
         GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
 
+        dispose(); // Zajistí změnu dekorací
+        setUndecorated(fullscreenMode); // Skrytí nebo zobrazení dekorací
         if (fullscreenMode) {
-            // Přepnout na fullscreen režim
-            dispose(); // Umožňuje změnit dekorace
-            setUndecorated(true); // Skrytí dekorací
             setJMenuBar(null); // Skrytí menu
-            statusPanel.setVisible(false); // Skryje status bar
             ToolBar.setVisible(false); // Skrytí toolbaru
-
-            // Nastavení fullscreen přes GraphicsDevice
+            statusPanel.setVisible(false); // Skrytí status panelu
             gd.setFullScreenWindow(this);
         } else {
-            // Přepnout na normální režim
             gd.setFullScreenWindow(null);
-            dispose(); // Umožňuje změnit dekorace
-            setUndecorated(false); // Zobrazení dekorací
             setJMenuBar(jMenuBar1); // Zobrazení menu
             ToolBar.setVisible(true); // Zobrazení toolbaru
-            statusPanel.setVisible(true); // Zobrazí status bar
-
-            // Nastavit velikost okna zpět na původní
-            pack();
-            setLocationRelativeTo(null);
-            setVisible(true);
+            statusPanel.setVisible(true); // Zobrazení status panelu
         }
+
+        // Aktualizace velikosti okna podle nového režimu
         updateWindowSize();
+        scr.revalidate();
+        scr.repaint();
+        setVisible(true); // Zajištění viditelnosti
     }
 
     public void LoadBinSilently(boolean bAutoStart) {
@@ -697,7 +714,10 @@ public class JOndra extends javax.swing.JFrame {
         m.setClockSpeed(20);
         m.startEmulation();
         setProposalName("");
+        m.stopEmulation();
+        m.cpu.bBreakExecution = true;
         m.Reset(false);
+        m.startEmulation();
     }//GEN-LAST:event_bResetActionPerformed
 
     private void bNmiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bNmiActionPerformed
@@ -1104,39 +1124,61 @@ public class JOndra extends javax.swing.JFrame {
         boolean pau = m.isPaused();
 
         m.stopEmulation();
+        m.cpu.bBreakExecution = true;
         deb.showDialog();
         deb.setAlwaysOnTop(true);
     }
 
     private void initEmulator() {
         m = new Ondra();
+
+        // Inicializace obrazovky a nastavení výchozí velikosti podle poměru stran
         scr = new Screen();
+        BufferedImage image = m.getImage(); // Získání výchozího obrazu
+        int ratio = scr.getRatio(); // Získání výchozího poměru stran (např. 2)
+        int width = image.getWidth() * ratio;
+        int height = image.getHeight() * ratio;
+        scr.setPreferredSize(new Dimension(width, height));
+        scr.revalidate();
+        scr.repaint();
+
+        // Nastavení režimu fullscreen, pokud je povolen
         scr.setFullScreen(bFullscreen);
-        scr.setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
 
+        // Přiřazení obrazovky emulátoru
         m.setScreen(scr);
-        scr.setImage(m.getImage());
+        scr.setImage(image);
 
+        // Inicializace dalších komponent
         deb = new Debugger(m);
         bopn = new BinOpen(m);
         bopn.setParent(this);
         bsav = new BinSave(m);
         kbrd = new KeyboardPicture(this);
+
+        // Nastavení emulátoru
         m.setDebugger(deb);
         m.setFrame(this);
-
         m.setGreenLed(GreenLed);
         m.setYellowLed(YellowLed);
         m.setTapeLed(TapeLed);
         m.setRecButton(bRec);
 
+        // Přidání obrazovky do hlavního okna
         getContentPane().add(scr, BorderLayout.CENTER);
-        pack();
 
+        // Aktualizace velikosti okna podle obrazovky
+        updateWindowSize();
+
+        // Centrovat okno na obrazovce
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width - getSize().width) / 2, (screen.height - getSize().height) / 2);
+
+        // Nastavení klávesnice a zajištění, že klávesové události fungují správně
         setFocusTraversalKeysEnabled(false);
         addKeyListener(m.getKeyboard());
+
+        // Start emulátoru
         m.start();
     }
 

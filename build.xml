@@ -9,7 +9,13 @@
 <!-- in the project's Project Properties dialog box.-->
 <project name="JOndra" default="default" basedir=".">
     <description>Builds, tests, and runs the project JOndra.</description>
-    <import file="nbproject/build-impl.xml"/>
+    <import file="nbproject/build-impl.xml" />
+
+
+</project>
+
+
+
     <!--
 
     There exist several targets which are by default empty and which can be 
@@ -70,4 +76,4 @@
     nbproject/build-impl.xml file. 
 
     -->
-</project>
+<!-- </project> -->

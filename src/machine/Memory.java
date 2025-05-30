@@ -60,13 +60,13 @@ public final class Memory {
             int a = 0;
             for(int i=0; i<32; i++) {
                 for(int j=0; j<PAGE_SIZE; j++) {
+                    //int reconstructedAddress = (i << PAGE_BIT) | (j & PAGE_MASK);                    
                     Ram[i][j] = (byte) c;
-                    a = a++ & 127;
+                    a = (a+1) & 127;
                     if (a==0) { c ^= 255; };
                 }
             }
         }
-        
         if (cf.getRomType()==cf.CUSTOM) {
             for(int i=0; i<PAGE_SIZE; i++) {
                 Cust[0][i] = (byte) 255;
@@ -91,22 +91,21 @@ public final class Memory {
         return Ram[address >>> PAGE_BIT][address & PAGE_MASK];
     }
 
-    public byte readByte(int address) {
-        
+    public byte readByte(int address) {        
         if(readPages[address >>> PAGE_BIT] == IOVect){
             //kvuli cteni klavesnice
            return readPages[address >>> PAGE_BIT][address & 0xFF];  
         }
-        
+       
         return readPages[address >>> PAGE_BIT][address & PAGE_MASK];
     }
     
     public void writeByte(int address, byte value) {
-        if(writePages[address >>> PAGE_BIT] != fakeROM){
+        if(writePages[address >>> PAGE_BIT] != fakeROM){             
             writePages[address >>> PAGE_BIT][address & PAGE_MASK] = value;
             if (address>=0xd800) {
                 m.processVram(address);
-            }
+            }           
         }
     }
     
@@ -438,4 +437,23 @@ public final class Memory {
         }
         return res;
     }
+    
+    public byte[] copyRamToByteArray() {
+    // Celková velikost RAM je 32 stránek po 2 KB
+    int totalRamSize = 32 * PAGE_SIZE;
+    byte[] ramCopy = new byte[totalRamSize];
+
+    // Iterace přes každou stránku RAM
+    for (int pageIndex = 0; pageIndex < Ram.length; pageIndex++) {
+        System.arraycopy(Ram[pageIndex], 0, ramCopy, pageIndex * PAGE_SIZE, PAGE_SIZE);
+    }
+
+    return ramCopy;
+   }
+    
+    public byte[][] getRamPages() {
+     return readPages;     
+    }
+
+    
 }

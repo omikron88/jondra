@@ -28,7 +28,7 @@ public class About extends JDialog {
     Box b2 = Box.createHorizontalBox();   
     b2.add(new JLabel("Ondra emulator written in pure Java"));
     Box b3 = Box.createHorizontalBox();
-    b3.add(new JLabel("Build date 8.12.2024"));
+    b3.add(new JLabel("Build date 30.1.2025"));
     b.add(b2, "Center");
     b.add(b3, "Center");
     b.add(Box.createGlue());

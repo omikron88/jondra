@@ -128,15 +128,28 @@
  */
 package z80core;
 
+import disassemblers.Z80Dis;
 import java.util.Arrays;
 import machine.Clock;
 import machine.Ondra;
+import timeline.MemoryTimeline;
 
 public class Z80 {
+        
+    // MemoryTimeline
+    public MemoryTimeline timeline=null;
+    public String strInstrBefore="";
+    
+    
     public final Clock clock;
     private final MemIoOps MemIoImpl;
     private final NotifyOps NotifyImpl;
     public boolean bMemBP=false;
+    public boolean bMemBPR=false;
+    public boolean bBreakExecution=false;
+    
+    
+    
     // Código de instrucción a ejecutar
     private int opCode;
     // Subsistema de notificaciones
@@ -285,6 +298,8 @@ public class Z80 {
         NotifyImpl = notify;
         execDone = false;
         Arrays.fill(breakpointAt, false);
+        Ondra m = (Ondra) NotifyImpl;
+        timeline = new MemoryTimeline(m.maxRecords, m.memorySize, m.snapshotInterval);
         reset();
     }
 
@@ -578,7 +593,7 @@ public class Z80 {
         return regPC;
     }
 
-    public final void setRegPC(int address) {        
+    public final void setRegPC(int address) {         
         regPC = address & 0xffff;
     }
 
@@ -1725,8 +1740,22 @@ public class Z80 {
      */
     public final void execute(long statesLimit) {
         bMemBP=false;
+        bMemBPR=false;
+        bBreakExecution=false;
+        byte[] registryBackup = new byte[26];
         while (clock.getTstates() < statesLimit) {
-
+            //ukladam registry pro pripad memory breakpointu, ten se detekuje az v prubehu instrukce, tak aby byla moznost nastavit vychozi stav.
+            backupState(registryBackup);
+            Ondra m = (Ondra) NotifyImpl;
+            
+            //ukladam snashoty pro timeline            
+            if (utils.Config.bEnableTimeline) {
+                if (m.getDebugger().isEnoughMemoryForTimeline()) {                    
+                     byte[] snap = m.saveSnapshotToArray();
+                     timeline.update(snap);                     
+                }
+            }
+            
             // Primero se comprueba NMI
             if (activeNMI) {
                 activeNMI = false;
@@ -1747,7 +1776,7 @@ public class Z80 {
 
             if (breakpointAt[regPC]) {
                 boolean bBreak = false;
-                Ondra m = (Ondra) NotifyImpl;
+               // Ondra m = (Ondra) NotifyImpl;
                 if (m.getDebugger().isDebuggerBkp(regPC)) {
                     //breakpoint z Debuggeru
                     opCode = NotifyImpl.atAddress(regPC, opCode);
@@ -1779,8 +1808,36 @@ public class Z80 {
             regPC = (regPC + 1) & 0xffff;
 
             decodeOpcode(opCode);
-//pokud se objevil memory breakpoint tak vyskoc
-            if(bMemBP) break;
+            if (bBreakExecution) {
+                break;
+            }
+            //pokud se objevil memory breakpoint tak vyskoc
+            if (bMemBP) {
+                restoreState(registryBackup);
+                if (utils.Config.bEnableTimeline) {
+                    if (m.getDebugger().isEnoughMemoryForTimeline()) {
+                        byte[] snap = m.saveSnapshotToArray();
+                        timeline.update(snap);
+                    }
+                }
+                m.stopEmulation();
+                m.getDebugger().showDialog();
+
+                break;
+            }
+            if(bMemBPR) {
+                restoreState(registryBackup);
+                if (utils.Config.bEnableTimeline) {
+                    if (m.getDebugger().isEnoughMemoryForTimeline()) {
+                        byte[] snap = m.saveSnapshotToArray();
+                        timeline.update(snap);
+                    }
+                }
+                m.stopEmulation();
+                m.getDebugger().showDialog();
+
+                break;
+            }
             // Si está pendiente la activación de la interrupciones y el
             // código que se acaba de ejecutar no es el propio EI
             if (pendingEI && opCode != 0xFB) {
@@ -1789,7 +1846,16 @@ public class Z80 {
 
             if (execDone) {
                 NotifyImpl.execDone();
+            }            
+            //ukladam snashoty pro timeline                       
+            /*
+            if (utils.Config.bEnableTimeline) {
+                if (m.getDebugger().isEnoughMemoryForTimeline()) {
+                    byte[] snap = m.saveSnapshotToArray();
+                    timeline.update(snap);
+                }
             }
+            */
 
         } /* del while */
     }
@@ -6368,4 +6434,80 @@ public class Z80 {
             }
         }
     }
+    
+    private void backupState(byte[] snapshotBuffer) {
+    int index = 0;
+ 
+    // Hlavní registry
+    snapshotBuffer[index++] = (byte) regA;
+    snapshotBuffer[index++] = (byte) (carryFlag ? sz5h3pnFlags | CARRY_MASK : sz5h3pnFlags);
+    snapshotBuffer[index++] = (byte) regB;
+    snapshotBuffer[index++] = (byte) regC;
+    snapshotBuffer[index++] = (byte) regD;
+    snapshotBuffer[index++] = (byte) regE;
+    snapshotBuffer[index++] = (byte) regH;
+    snapshotBuffer[index++] = (byte) regL;
+
+    // Stínové registry (AF', BC', DE', HL')
+    snapshotBuffer[index++] = (byte) regAx;
+    snapshotBuffer[index++] = (byte) regFx;
+    snapshotBuffer[index++] = (byte) regBx;
+    snapshotBuffer[index++] = (byte) regCx;
+    snapshotBuffer[index++] = (byte) regDx;
+    snapshotBuffer[index++] = (byte) regEx;
+    snapshotBuffer[index++] = (byte) regHx;
+    snapshotBuffer[index++] = (byte) regLx;
+
+    // 16bitové registry (uložené ve dvou bajtech)
+    snapshotBuffer[index++] = (byte) (regIX & 0xFF);
+    snapshotBuffer[index++] = (byte) ((regIX >>> 8) & 0xFF);
+    snapshotBuffer[index++] = (byte) (regIY & 0xFF);
+    snapshotBuffer[index++] = (byte) ((regIY >>> 8) & 0xFF);
+    snapshotBuffer[index++] = (byte) (regSP & 0xFF);
+    snapshotBuffer[index++] = (byte) ((regSP >>> 8) & 0xFF);
+    snapshotBuffer[index++] = (byte) (regPC & 0xFF);
+    snapshotBuffer[index++] = (byte) ((regPC >>> 8) & 0xFF);
+
+    // Speciální registry
+    snapshotBuffer[index++] = (byte) regI;
+    snapshotBuffer[index++] = (byte) regR;
+}
+    
+    
+private void restoreState(byte[] snapshotBuffer) {
+    int index = 0;
+    
+    // Hlavní registry
+    regA = snapshotBuffer[index++] & 0xFF;
+    int regF = snapshotBuffer[index++] & 0xFF;
+    sz5h3pnFlags = regF & 0xfe;
+    carryFlag = (regF & CARRY_MASK) != 0;
+    regB = snapshotBuffer[index++] & 0xFF;
+    regC = snapshotBuffer[index++] & 0xFF;
+    regD = snapshotBuffer[index++] & 0xFF;
+    regE = snapshotBuffer[index++] & 0xFF;
+    regH = snapshotBuffer[index++] & 0xFF;
+    regL = snapshotBuffer[index++] & 0xFF;
+
+    // Stínové registry (AF', BC', DE', HL')
+    regAx = snapshotBuffer[index++] & 0xFF;
+    regFx = snapshotBuffer[index++] & 0xFF;
+    regBx = snapshotBuffer[index++] & 0xFF;
+    regCx = snapshotBuffer[index++] & 0xFF;
+    regDx = snapshotBuffer[index++] & 0xFF;
+    regEx = snapshotBuffer[index++] & 0xFF;
+    regHx = snapshotBuffer[index++] & 0xFF;
+    regLx = snapshotBuffer[index++] & 0xFF;
+
+    // 16bitové registry
+    regIX =  ((snapshotBuffer[index++] & 0xFF) | ((snapshotBuffer[index++] & 0xFF) << 8));
+    regIY =  ((snapshotBuffer[index++] & 0xFF) | ((snapshotBuffer[index++] & 0xFF) << 8));
+    regSP =  ((snapshotBuffer[index++] & 0xFF) | ((snapshotBuffer[index++] & 0xFF) << 8));
+    regPC = ((snapshotBuffer[index++] & 0xFF) | ((snapshotBuffer[index++] & 0xFF) << 8));
+
+    // Speciální registry
+    regI = snapshotBuffer[index++] & 0xFF;
+    regR = snapshotBuffer[index++] & 0xFF;
+}
+
 }
