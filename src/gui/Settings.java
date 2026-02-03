@@ -54,6 +54,11 @@ public class Settings extends javax.swing.JDialog {
                 break;
             }
             case 3: {
+                bPlus.setSelected(true);
+                setCustom(false);
+                break;
+            }
+            default: {
                 bCustom.setSelected(true);
                 setCustom(true);
                 break;
@@ -97,6 +102,7 @@ public class Settings extends javax.swing.JDialog {
         bBasic = new javax.swing.JRadioButton();
         bTesla = new javax.swing.JRadioButton();
         bVili = new javax.swing.JRadioButton();
+        bPlus = new javax.swing.JRadioButton();
         bCustom = new javax.swing.JRadioButton();
         lRomA = new javax.swing.JLabel();
         tRomA = new javax.swing.JTextField();
@@ -142,6 +148,14 @@ public class Settings extends javax.swing.JDialog {
         bVili.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 bViliActionPerformed(evt);
+            }
+        });
+
+        buttonGroup1.add(bPlus);
+        bPlus.setText("Ondra Plus ROM");
+        bPlus.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bPlusActionPerformed(evt);
             }
         });
 
@@ -266,8 +280,9 @@ public class Settings extends javax.swing.JDialog {
                             .addComponent(lRomA)
                             .addComponent(bTesla)
                             .addComponent(bVili)
-                            .addComponent(bBasic))
-                        .addGap(0, 56, Short.MAX_VALUE)))
+                            .addComponent(bBasic)
+                            .addComponent(bPlus))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
@@ -279,6 +294,8 @@ public class Settings extends javax.swing.JDialog {
                 .addComponent(bTesla, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(bVili)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(bPlus)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(bCustom)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -303,7 +320,7 @@ public class Settings extends javax.swing.JDialog {
                 .addComponent(jCheckScanlines)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jScaleNx)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(bOk)
                 .addContainerGap())
         );
@@ -328,6 +345,12 @@ public class Settings extends javax.swing.JDialog {
         setCustom(false);
         ResetNeeded = true;
     }//GEN-LAST:event_bViliActionPerformed
+
+    private void bPlusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bPlusActionPerformed
+        cf.setRomType(cf.PLUS);
+        setCustom(false);
+        ResetNeeded = true;
+    }//GEN-LAST:event_bPlusActionPerformed
 
     private void bCustomActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bCustomActionPerformed
         cf.setRomType(cf.CUSTOM);
@@ -425,6 +448,7 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JRadioButton bBasic;
     private javax.swing.JRadioButton bCustom;
     private javax.swing.JButton bOk;
+    private javax.swing.JRadioButton bPlus;
     private javax.swing.JButton bRomA;
     private javax.swing.JButton bRomB;
     private javax.swing.JRadioButton bTesla;

@@ -21,6 +21,7 @@ public final class Memory {
     private byte[][] Basic = new byte[8][PAGE_SIZE];
     private byte[][] Tesla = new byte[2][PAGE_SIZE];
     private byte[][] Vili  = new byte[2][PAGE_SIZE];
+    private byte[][] Plus = new byte[8][PAGE_SIZE];
     private byte[][] Cust  = new byte[8][PAGE_SIZE];
     
     private byte[][] readPages = new byte[32][];
@@ -188,6 +189,18 @@ public final class Memory {
                     break;
                 }
                  
+                case 3: {               // Plus
+                    readPages[0] = Plus[0];
+                    readPages[1] = Plus[1];
+                    readPages[2] = Plus[2];
+                    readPages[3] = Plus[3];
+                    readPages[4] = Plus[4];
+                    readPages[5] = Plus[5];
+                    readPages[6] = Plus[6];
+                    readPages[7] = Plus[7];
+                    break;
+                }
+                
                 default: {               // Custom
                     readPages[0] = Cust[0];
                     readPages[1] = Cust[1];
@@ -261,6 +274,13 @@ public final class Memory {
         }
         if (!loadRomAsFile(rd+cf.getTeslaB(), Vili, 1, PAGE_SIZE * 1)) {
             loadRomAsResource("/roms/Ondra_ViLi_v27_b.rom", Vili, 1, PAGE_SIZE * 1);
+        }
+
+        if (!loadRomAsFile(rd+cf.getPlusA(), Plus, 0, PAGE_SIZE * 4)) {
+            loadRomAsResource("/roms/Ondra_PLUS_a.rom", Plus, 0, PAGE_SIZE * 4);
+        }
+        if (!loadRomAsFile(rd+cf.getPlusB(), Plus, 4, PAGE_SIZE * 4)) {
+            loadRomAsResource("/roms/Ondra_PLUS_b.rom", Plus, 4, PAGE_SIZE * 4);
         }
     }
 

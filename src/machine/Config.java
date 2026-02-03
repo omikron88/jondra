@@ -13,7 +13,8 @@ public class Config {
     public final byte BASIC = 0;
     public final byte TESLA = 1;
     public final byte VILI = 2;
-    public final byte CUSTOM = 3;
+    public final byte PLUS = 3;
+    public final byte CUSTOM = 100;
 
     private String BASIC_a = "Ondra_BASICEXP_V5_a.rom";
     private String BASIC_b = "Ondra_BASICEXP_V5_b.rom";
@@ -21,6 +22,8 @@ public class Config {
     private String TESLA_b = "Ondra_TESLA_V5_b.rom";
     private String VILI_a = "Ondra_ViLi_v27_a.rom";
     private String VILI_b = "Ondra_ViLi_v27_b.rom";
+    private String PLUS_a = "Ondra_PLUS_a.rom";
+    private String PLUS_b = "Ondra_PLUS_b.rom";
 
     private byte Rom = (byte) utils.Config.nRomType;
 
@@ -132,4 +135,11 @@ public class Config {
         return VILI_b;
     }
 
+    public String getPlusA() {
+        return PLUS_a;
+    }
+
+    public String getPlusB() {
+        return PLUS_b;
+    }
 }

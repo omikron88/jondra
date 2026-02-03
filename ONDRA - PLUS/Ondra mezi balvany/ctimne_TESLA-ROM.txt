@@ -1,0 +1,13 @@
+Postup pro nahrání a spuštění hry "Ondra mezi balvany" pro TESLA ROM (Mikos)
+----------------------------------------------------------------------------
+
+1. Hra se nahraje příkazem "L"
+	zobrazi se "cteni - hotovo?"
+	stisknout Enter
+	na chvili se zobrazi "BALVANY"
+	nyni pockat celou dobu na nahrani do pocitace
+	
+2. Po skonceni nahravani se zobrazi opet jen "Ondra v.5"
+	spustit hru prikazem "G 4600"
+	
+

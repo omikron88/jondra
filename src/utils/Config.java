@@ -60,7 +60,7 @@ public class Config {
     
     public static String strRomAFilePath = "";
     public static String strRomBFilePath = "";
-    public static int nRomType = 0;
+    public static int nRomType = 3;
 
     public static String getMyPath() {
         String retVal = "";
@@ -217,6 +217,6 @@ public class Config {
         nSaveToAddress = parseIntSafe(prop.getProperty("BINSAVEADDRESSTO"), 0);        
         strRomAFilePath = nullToEmpty(prop.getProperty("ROMAFILEPATH"));
         strRomBFilePath = nullToEmpty(prop.getProperty("ROMBFILEPATH")); 
-        nRomType = parseIntSafe(prop.getProperty("ROMTYPE"),2);         
+        nRomType = parseIntSafe(prop.getProperty("ROMTYPE"),3);         
     }
 }
