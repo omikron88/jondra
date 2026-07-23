@@ -8,11 +8,29 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install SDL build dependencies
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update &&
+          sudo apt-get install -y
+          libasound2-dev
+          libx11-dev
+          libxext-dev
+          libxrandr-dev
+          libxcursor-dev
+          libxfixes-dev
+          libxi-dev
+          libxss-dev
+          libxtst-dev
+          libxkbcommon-dev
+          libgl1-mesa-dev
+          libegl1-mesa-dev
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
