@@ -1,5 +1,7 @@
 #include "jondra/memory.hpp"
 
+#include "jondra/embedded_roms.hpp"
+
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
@@ -29,14 +31,23 @@ void Memory::reset(bool dirty) {
 void Memory::load_fragment(const std::filesystem::path& path,
                            std::span<std::uint8_t> destination,
                            bool repeat_to_fill) {
-    std::ifstream stream(path, std::ios::binary);
-    if(!stream)
-        throw std::runtime_error("Cannot open ROM: " + path.string());
+    std::vector<std::uint8_t> external_source;
+    std::span<const std::uint8_t> source;
+    if(std::filesystem::exists(path)) {
+        std::ifstream stream(path, std::ios::binary);
+        if(!stream)
+            throw std::runtime_error("Cannot open ROM: " + path.string());
+        external_source.assign(
+            std::istreambuf_iterator<char>(stream),
+            std::istreambuf_iterator<char>());
+        source = external_source;
+    } else {
+        source = embedded_rom(path.filename().string());
+    }
 
-    std::vector<std::uint8_t> source(
-        (std::istreambuf_iterator<char>(stream)),
-        std::istreambuf_iterator<char>());
-    if(source.empty() || (!repeat_to_fill && source.size() != destination.size()) ||
+    if(source.empty())
+        throw std::runtime_error("Cannot open ROM: " + path.string());
+    if((!repeat_to_fill && source.size() != destination.size()) ||
        (repeat_to_fill && destination.size() % source.size() != 0)) {
         throw std::runtime_error("Unexpected ROM size: " + path.string());
     }

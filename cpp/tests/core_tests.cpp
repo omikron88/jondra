@@ -79,6 +79,15 @@ void test_machine_ports_and_video() {
     CHECK(lit_pixel_byte);
 }
 
+void test_embedded_roms() {
+#ifdef JONDRA_HAS_EMBEDDED_ROMS
+    jondra::Keyboard keyboard;
+    jondra::Memory memory(keyboard);
+    memory.load_rom(jondra::RomType::Basic, "directory-that-does-not-exist");
+    CHECK(memory.read(0) != memory.read_ram(0));
+#endif
+}
+
 } // namespace
 
 int main() {
@@ -86,5 +95,6 @@ int main() {
     test_memory_mapping();
     test_rom_and_cpu();
     test_machine_ports_and_video();
+    test_embedded_roms();
     std::cout << "All jondra core tests passed\n";
 }

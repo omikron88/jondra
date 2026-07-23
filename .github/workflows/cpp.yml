@@ -19,3 +19,43 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+
+  static-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-sdl3
+      - name: Configure static build
+        run: >-
+          cmake -S . -B build-static -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DJONDRA_FETCH_SDL=OFF
+          -DJONDRA_STATIC=ON
+      - name: Build
+        run: cmake --build build-static --parallel
+      - name: Test
+        run: ctest --test-dir build-static --output-on-failure
+      - name: Verify runtime dependencies
+        run: |
+          dependencies="$(ldd build-static/jondra.exe)"
+          echo "$dependencies"
+          if grep -Eiq 'SDL3|libstdc\+\+|libgcc|libwinpthread|msys-2' <<<"$dependencies"; then
+            echo "Unexpected third-party runtime DLL"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jondra-windows-x64-static
+          path: build-static/jondra.exe

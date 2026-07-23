@@ -36,6 +36,24 @@ Use an installed SDL3 instead:
 cmake -S . -B build -DJONDRA_FETCH_SDL=OFF
 ```
 
+### Self-contained Windows executable with MSYS2
+
+The static configuration links SDL3 and the MinGW runtime into the executable
+and embeds all bundled ROM variants:
+
+```sh
+cmake -S . -B build-static -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DJONDRA_FETCH_SDL=OFF \
+  -DJONDRA_STATIC=ON
+cmake --build build-static --parallel
+ctest --test-dir build-static --output-on-failure
+```
+
+Run `ldd build-static/jondra.exe` to verify that no SDL3 or MinGW runtime DLLs
+remain. Windows system DLLs are expected. `--rom-dir` remains available for
+custom or replacement ROM images.
+
 The default ROM is BASIC. Other bundled variants can be selected with
 `--rom tesla`, `--rom vili`, or `--rom plus`.
 
