@@ -1,7 +1,12 @@
 #include "jondra/machine.hpp"
+#include "jondra/ui.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlrenderer3.h"
 
 #include <array>
 #include <chrono>
@@ -104,7 +109,9 @@ int main(int argc, char** argv) {
         SDL_Window* window = nullptr;
         SDL_Renderer* renderer = nullptr;
         if(!SDL_CreateWindowAndRenderer(
-                "JOndra C++", 960, 768, SDL_WINDOW_RESIZABLE, &window, &renderer))
+                "JOndra C++", 1120, 820,
+                SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY,
+                &window, &renderer))
             throw std::runtime_error(SDL_GetError());
 
         SDL_Texture* texture = SDL_CreateTexture(
@@ -114,13 +121,22 @@ int main(int argc, char** argv) {
             throw std::runtime_error(SDL_GetError());
 
         SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-        SDL_SetRenderLogicalPresentation(
-            renderer, jondra::Machine::screen_width, jondra::Machine::screen_height,
-            SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        ImGui::StyleColorsDark();
+        if(!ImGui_ImplSDL3_InitForSDLRenderer(window, renderer))
+            throw std::runtime_error("Could not initialize ImGui SDL3 backend");
+        if(!ImGui_ImplSDLRenderer3_Init(renderer))
+            throw std::runtime_error("Could not initialize ImGui renderer backend");
 
         jondra::Machine machine;
         machine.load_rom(rom_type, rom_directory);
         machine.reset();
+        jondra::UiState ui_state;
+        ui_state.rom_type = rom_type;
 
         std::array<std::uint32_t,
                    jondra::Machine::screen_width * jondra::Machine::screen_height> pixels{};
@@ -131,12 +147,14 @@ int main(int argc, char** argv) {
         while(running) {
             SDL_Event event{};
             while(SDL_PollEvent(&event)) {
+                ImGui_ImplSDL3_ProcessEvent(&event);
                 if(event.type == SDL_EVENT_QUIT)
                     running = false;
                 else if(event.type == SDL_EVENT_KEY_DOWN ||
                         event.type == SDL_EVENT_KEY_UP) {
                     const bool pressed = event.type == SDL_EVENT_KEY_DOWN;
-                    if(pressed && !event.key.repeat) {
+                    const bool captured = ImGui::GetIO().WantCaptureKeyboard;
+                    if(pressed && !event.key.repeat && !captured) {
                         if(event.key.scancode == SDL_SCANCODE_ESCAPE)
                             running = false;
                         else if(event.key.scancode == SDL_SCANCODE_F5)
@@ -146,11 +164,14 @@ int main(int argc, char** argv) {
                         else if(event.key.scancode == SDL_SCANCODE_F12)
                             machine.reset();
                     }
-                    if(const auto key = translate_key(event.key.scancode))
-                        machine.key(*key, pressed);
+                    if(!pressed || !captured) {
+                        if(const auto key = translate_key(event.key.scancode))
+                            machine.key(*key, pressed);
+                    }
                 }
             }
 
+            running &= !ui_state.quit_requested;
             if(!paused)
                 machine.run_frame();
 
@@ -164,9 +185,19 @@ int main(int argc, char** argv) {
 
             SDL_UpdateTexture(texture, nullptr, pixels.data(),
                               jondra::Machine::screen_width * sizeof(std::uint32_t));
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+            ImGui_ImplSDLRenderer3_NewFrame();
+            ImGui_ImplSDL3_NewFrame();
+            ImGui::NewFrame();
+            jondra::draw_ui(window, texture, machine, rom_directory, paused,
+                            ui_state);
+            ImGui::Render();
+
+            SDL_SetRenderScale(renderer, io.DisplayFramebufferScale.x,
+                              io.DisplayFramebufferScale.y);
+            SDL_SetRenderDrawColor(renderer, 18, 20, 22, 255);
             SDL_RenderClear(renderer);
-            SDL_RenderTexture(renderer, texture, nullptr, nullptr);
+            ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
             SDL_RenderPresent(renderer);
 
             deadline += std::chrono::milliseconds(20);
@@ -176,6 +207,9 @@ int main(int argc, char** argv) {
                 deadline = now;
         }
 
+        ImGui_ImplSDLRenderer3_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+        ImGui::DestroyContext();
         SDL_DestroyTexture(texture);
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);

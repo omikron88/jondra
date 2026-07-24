@@ -12,11 +12,13 @@ migrated.
 - BASIC, Tesla, ViLi and Ondra Plus ROM layouts;
 - DMA video address mapping and dynamic vertical resolution;
 - SDL3 window, nearest-neighbour rendering and keyboard input;
+- Dear ImGui menu bar, toolbar, status bar, settings and debugger shell;
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 
-Audio, tape formats, snapshots, rewind and the graphical debugger still use the
-Java implementation and will be migrated in later milestones.
+Audio, tape formats, snapshots, rewind and the full graphical debugger still
+use the Java implementation and will be migrated in later milestones. Their UI
+entries are shown but disabled until the corresponding backend is available.
 
 ## Build
 
@@ -73,5 +75,7 @@ Emulator controls:
 ## Dependency licensing
 
 The fetched Z80 core is copyright Ivan Kosarev and distributed under the MIT
-license. See its upstream `LICENSE` file in the CMake dependency source tree.
-The combined JOndra application remains licensed under GPL-2.0.
+license. Dear ImGui is copyright Omar Cornut and contributors and distributed
+under the MIT license. See the upstream `LICENSE.txt` files in the CMake
+dependency source tree. The combined JOndra application remains licensed under
+GPL-2.0.

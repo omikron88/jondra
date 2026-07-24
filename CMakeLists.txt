@@ -80,17 +80,46 @@ if(JONDRA_BUILD_APP)
         message(FATAL_ERROR "SDL3 was not found; install it or configure with -DJONDRA_FETCH_SDL=ON")
     endif()
 
-    add_executable(jondra cpp/src/main.cpp)
     if(JONDRA_STATIC)
         if(NOT TARGET SDL3::SDL3-static)
             message(FATAL_ERROR "The selected SDL3 package does not provide SDL3::SDL3-static")
         endif()
-        target_link_libraries(jondra PRIVATE jondra_core SDL3::SDL3-static)
+        set(JONDRA_SDL_TARGET SDL3::SDL3-static)
+    else()
+        set(JONDRA_SDL_TARGET SDL3::SDL3)
+    endif()
+
+    FetchContent_Declare(
+        imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.91.9b
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(imgui)
+
+    add_library(jondra_imgui STATIC
+        "${imgui_SOURCE_DIR}/imgui.cpp"
+        "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+        "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+        "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp"
+    )
+    target_include_directories(jondra_imgui SYSTEM PUBLIC
+        "${imgui_SOURCE_DIR}"
+        "${imgui_SOURCE_DIR}/backends"
+    )
+    target_link_libraries(jondra_imgui PUBLIC ${JONDRA_SDL_TARGET})
+
+    add_executable(jondra
+        cpp/src/main.cpp
+        cpp/src/ui.cpp
+    )
+    target_link_libraries(jondra PRIVATE jondra_core jondra_imgui)
+    if(JONDRA_STATIC)
         if(MINGW)
             target_link_options(jondra PRIVATE -static -static-libgcc -static-libstdc++)
         endif()
-    else()
-        target_link_libraries(jondra PRIVATE jondra_core SDL3::SDL3)
     endif()
 endif()
 
