@@ -126,6 +126,10 @@ int main(int argc, char** argv) {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        // The emulator owns the keyboard unless an ImGui widget is actively
+        // editing input. A focused navigation window must not swallow the
+        // emulated keyboard matrix.
+        io.ConfigNavCaptureKeyboard = false;
         ImGui::StyleColorsDark();
         if(!ImGui_ImplSDL3_InitForSDLRenderer(window, renderer))
             throw std::runtime_error("Could not initialize ImGui SDL3 backend");
