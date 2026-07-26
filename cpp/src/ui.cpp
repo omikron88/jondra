@@ -1,5 +1,6 @@
 #include "jondra/ui.hpp"
 
+#include "jondra/binary_file.hpp"
 #include "jondra/machine.hpp"
 
 #include <SDL3/SDL.h>
@@ -10,7 +11,12 @@
 #include <array>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -18,12 +24,105 @@ using jondra::Machine;
 using jondra::RomType;
 using jondra::UiState;
 
+enum class FileDialogKind {
+    BinaryLoad,
+    BinarySave
+};
+
+struct FileDialogContext {
+    FileDialogKind kind;
+    std::string default_location;
+};
+
+struct FileDialogResult {
+    FileDialogKind kind;
+    std::optional<std::string> path;
+    std::string error;
+};
+
+std::mutex file_dialog_mutex;
+std::vector<FileDialogResult> file_dialog_results;
+
 constexpr std::array<std::pair<RomType, std::string_view>, 4> rom_names{{
     {RomType::Basic, "BASIC EXP V5"},
     {RomType::Tesla, "Tesla V5"},
     {RomType::Vili, "ViLi v27"},
     {RomType::Plus, "Ondra Plus"},
 }};
+
+void SDLCALL file_dialog_callback(void* userdata,
+                                  const char* const* file_list, int) {
+    const auto context =
+        std::unique_ptr<FileDialogContext>(
+            static_cast<FileDialogContext*>(userdata));
+    FileDialogResult result{context->kind, std::nullopt, {}};
+    if(file_list == nullptr)
+        result.error = SDL_GetError();
+    else if(*file_list != nullptr)
+        result.path = *file_list;
+
+    const std::scoped_lock lock(file_dialog_mutex);
+    file_dialog_results.push_back(std::move(result));
+}
+
+std::filesystem::path path_from_utf8(std::string_view text) {
+    const auto* begin = reinterpret_cast<const char8_t*>(text.data());
+    return std::filesystem::path(
+        std::u8string(begin, begin + text.size()));
+}
+
+void process_file_dialog_results(UiState& state) {
+    std::vector<FileDialogResult> results;
+    {
+        const std::scoped_lock lock(file_dialog_mutex);
+        results.swap(file_dialog_results);
+    }
+    for(auto& result : results) {
+        state.native_file_dialog_open = false;
+        if(!result.error.empty()) {
+            state.status = "File dialog failed: " + result.error;
+        } else if(result.path) {
+            if(result.kind == FileDialogKind::BinaryLoad)
+                state.binary_load_path = std::move(*result.path);
+            else
+                state.binary_save_path = std::move(*result.path);
+        }
+    }
+}
+
+void show_native_file_dialog(SDL_Window* window, UiState& state,
+                             FileDialogKind kind) {
+    if(state.native_file_dialog_open)
+        return;
+
+    static constexpr SDL_DialogFileFilter filters[]{
+        {"Binary files", "bin;rom"},
+        {"All files", "*"},
+    };
+    const auto& current_path =
+        kind == FileDialogKind::BinaryLoad ? state.binary_load_path
+                                           : state.binary_save_path;
+    auto context = std::make_unique<FileDialogContext>();
+    context->kind = kind;
+    context->default_location = current_path;
+    auto* callback_context = context.release();
+    state.native_file_dialog_open = true;
+
+    if(kind == FileDialogKind::BinaryLoad) {
+        SDL_ShowOpenFileDialog(file_dialog_callback, callback_context, window,
+                               filters, static_cast<int>(std::size(filters)),
+                               callback_context->default_location.empty()
+                                   ? nullptr
+                                   : callback_context->default_location.c_str(),
+                               false);
+    } else {
+        SDL_ShowSaveFileDialog(file_dialog_callback, callback_context, window,
+                               filters, static_cast<int>(std::size(filters)),
+                               callback_context->default_location.empty()
+                                   ? nullptr
+                                   : callback_context->default_location.c_str());
+    }
+}
 
 std::string_view rom_name(RomType type) {
     for(const auto& [candidate, name] : rom_names) {
@@ -47,6 +146,23 @@ void reset_machine(Machine& machine, bool& paused, UiState& state) {
     state.status = "Machine reset";
 }
 
+void open_binary_window(bool load, bool& paused, UiState& state) {
+    if(!state.show_binary_load && !state.show_binary_save)
+        state.binary_dialog_was_running = !paused;
+    paused = true;
+    state.show_binary_load = load;
+    state.show_binary_save = !load;
+    state.status = load ? "Select a binary file to load"
+                        : "Select a memory range to save";
+}
+
+void finish_binary_window(bool& open, bool& paused, UiState& state) {
+    open = false;
+    if(state.binary_dialog_was_running)
+        paused = false;
+    state.binary_dialog_was_running = false;
+}
+
 void toggle_fullscreen(SDL_Window* window, UiState& state) {
     const bool requested = !state.fullscreen;
     if(SDL_SetWindowFullscreen(window, requested)) {
@@ -57,7 +173,7 @@ void toggle_fullscreen(SDL_Window* window, UiState& state) {
     }
 }
 
-void draw_file_menu(UiState& state) {
+void draw_file_menu(bool& paused, UiState& state) {
     if(!ImGui::BeginMenu("File"))
         return;
 
@@ -67,11 +183,13 @@ void draw_file_menu(UiState& state) {
     ImGui::Separator();
     ImGui::MenuItem("Open snapshot...");
     ImGui::MenuItem("Save snapshot...");
-    ImGui::Separator();
-    ImGui::MenuItem("Load memory block...");
-    ImGui::MenuItem("Save memory block...");
     ImGui::MenuItem("Save screenshot...");
     ImGui::EndDisabled();
+    ImGui::Separator();
+    if(ImGui::MenuItem("Load memory block..."))
+        open_binary_window(true, paused, state);
+    if(ImGui::MenuItem("Save memory block..."))
+        open_binary_window(false, paused, state);
     ImGui::Separator();
     if(ImGui::MenuItem("Exit", "Esc"))
         state.quit_requested = true;
@@ -116,7 +234,7 @@ void draw_menu_bar(SDL_Window* window, Machine& machine, bool& paused,
     if(!ImGui::BeginMainMenuBar())
         return;
 
-    draw_file_menu(state);
+    draw_file_menu(paused, state);
     draw_control_menu(window, machine, paused, state);
     draw_tools_menu(state);
     if(ImGui::BeginMenu("Help")) {
@@ -155,11 +273,133 @@ void draw_toolbar(Machine& machine, bool& paused, UiState& state) {
     ImGui::SameLine();
     unavailable_button("Snapshot");
     ImGui::SameLine();
+    if(ImGui::Button("Load binary"))
+        open_binary_window(true, paused, state);
+    ImGui::SameLine();
+    if(ImGui::Button("Save binary"))
+        open_binary_window(false, paused, state);
+    ImGui::SameLine();
     if(ImGui::Button("Debugger"))
         state.show_debugger = !state.show_debugger;
     ImGui::SameLine();
     if(ImGui::Button("Settings"))
         state.show_settings = true;
+}
+
+bool hex_address_input(const char* label, std::uint16_t& value) {
+    return ImGui::InputScalar(label, ImGuiDataType_U16, &value, nullptr,
+                              nullptr, "%04X",
+                              ImGuiInputTextFlags_CharsHexadecimal);
+}
+
+void draw_binary_load(SDL_Window* window, Machine& machine, bool& paused,
+                      UiState& state) {
+    if(!state.show_binary_load)
+        return;
+
+    bool open = true;
+    ImGui::SetNextWindowSize({520.0f, 0.0f}, ImGuiCond_FirstUseEver);
+    if(ImGui::Begin("Load memory block", &open,
+                    ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("File");
+        ImGui::TextWrapped("%s", state.binary_load_path.empty()
+                                    ? "(no file selected)"
+                                    : state.binary_load_path.c_str());
+        if(ImGui::Button("Browse..."))
+            show_native_file_dialog(window, state, FileDialogKind::BinaryLoad);
+
+        ImGui::Checkbox("File contains block headers",
+                        &state.binary_has_header);
+        ImGui::Checkbox("Write directly to all RAM", &state.binary_all_ram);
+
+        ImGui::BeginDisabled(state.binary_has_header);
+        hex_address_input("Load address", state.binary_load_address);
+        ImGui::Checkbox("Run after loading", &state.binary_run_after_load);
+        ImGui::BeginDisabled(!state.binary_run_after_load);
+        hex_address_input("Run address", state.binary_run_address);
+        ImGui::EndDisabled();
+        ImGui::EndDisabled();
+
+        ImGui::Separator();
+        ImGui::BeginDisabled(state.binary_load_path.empty() ||
+                             state.native_file_dialog_open);
+        if(ImGui::Button("Load")) {
+            try {
+                jondra::BinaryLoadOptions options;
+                options.load_address = state.binary_load_address;
+                options.run_address = state.binary_run_address;
+                options.run_after_load = state.binary_run_after_load;
+                options.all_ram = state.binary_all_ram;
+                options.has_header = state.binary_has_header;
+                const auto result = jondra::load_binary_file(
+                    path_from_utf8(state.binary_load_path), machine, options);
+                state.status =
+                    "Loaded " + std::to_string(result.bytes_loaded) + " bytes";
+                if(result.run_address)
+                    state.status += " and set PC";
+                finish_binary_window(state.show_binary_load, paused, state);
+            } catch(const std::exception& error) {
+                state.status = std::string("Load failed: ") + error.what();
+            }
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel"))
+            finish_binary_window(state.show_binary_load, paused, state);
+    }
+    ImGui::End();
+
+    if(!open && state.show_binary_load)
+        finish_binary_window(state.show_binary_load, paused, state);
+}
+
+void draw_binary_save(SDL_Window* window, const Machine& machine, bool& paused,
+                      UiState& state) {
+    if(!state.show_binary_save)
+        return;
+
+    bool open = true;
+    ImGui::SetNextWindowSize({520.0f, 0.0f}, ImGuiCond_FirstUseEver);
+    if(ImGui::Begin("Save memory block", &open,
+                    ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("File");
+        ImGui::TextWrapped("%s", state.binary_save_path.empty()
+                                    ? "(no file selected)"
+                                    : state.binary_save_path.c_str());
+        if(ImGui::Button("Browse..."))
+            show_native_file_dialog(window, state, FileDialogKind::BinarySave);
+
+        hex_address_input("First address", state.binary_save_first);
+        hex_address_input("Last address", state.binary_save_last);
+        const bool valid_range =
+            state.binary_save_first <= state.binary_save_last;
+        if(!valid_range)
+            ImGui::TextColored({1.0f, 0.45f, 0.35f, 1.0f},
+                               "The first address must not exceed the last.");
+
+        ImGui::Separator();
+        ImGui::BeginDisabled(state.binary_save_path.empty() || !valid_range ||
+                             state.native_file_dialog_open);
+        if(ImGui::Button("Save")) {
+            try {
+                const auto count = jondra::save_binary_file(
+                    path_from_utf8(state.binary_save_path), machine,
+                    state.binary_save_first, state.binary_save_last);
+                state.status = "Saved " + std::to_string(count) + " bytes";
+                finish_binary_window(state.show_binary_save, paused, state);
+            } catch(const std::exception& error) {
+                state.status = std::string("Save failed: ") + error.what();
+            }
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel"))
+            finish_binary_window(state.show_binary_save, paused, state);
+    }
+    ImGui::End();
+
+    if(!open && state.show_binary_save)
+        finish_binary_window(state.show_binary_save, paused, state);
 }
 
 void draw_screen(SDL_Texture* texture, const UiState& state) {
@@ -372,8 +612,11 @@ namespace jondra {
 void draw_ui(SDL_Window* window, SDL_Texture* screen_texture, Machine& machine,
              const std::filesystem::path& rom_directory, bool& paused,
              UiState& state) {
+    process_file_dialog_results(state);
     draw_menu_bar(window, machine, paused, state);
     draw_main_window(screen_texture, machine, paused, state);
+    draw_binary_load(window, machine, paused, state);
+    draw_binary_save(window, machine, paused, state);
     draw_settings(window, machine, rom_directory, paused, state);
     draw_debugger(machine, paused, state);
     draw_about(state);

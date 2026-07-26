@@ -1,9 +1,12 @@
+#include "jondra/binary_file.hpp"
 #include "jondra/keyboard.hpp"
 #include "jondra/machine.hpp"
 #include "jondra/memory.hpp"
 
 #include <cstdlib>
+#include <array>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 
 namespace {
@@ -88,6 +91,70 @@ void test_embedded_roms() {
 #endif
 }
 
+void test_binary_files() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "jondra-core-binary-test.bin";
+    jondra::Machine machine;
+
+    {
+        const std::array<unsigned char, 4> data{0x21, 0x34, 0x12, 0xc9};
+        std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+        stream.write(reinterpret_cast<const char*>(data.data()), data.size());
+    }
+    jondra::BinaryLoadOptions raw;
+    raw.load_address = 0x4000;
+    raw.run_after_load = true;
+    raw.run_address = 0x4000;
+    const auto raw_result = jondra::load_binary_file(path, machine, raw);
+    CHECK(raw_result.bytes_loaded == 4);
+    CHECK(raw_result.run_address == 0x4000);
+    CHECK(machine.get_pc() == 0x4000);
+    CHECK(machine.memory().read(0x4002) == 0x12);
+
+    {
+        const std::array<unsigned char, 10> data{
+            1, 0x00, 0x10, 0x02, 0x00, 0xaa, 0x55, 2, 0x00, 0x10};
+        std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+        stream.write(reinterpret_cast<const char*>(data.data()), data.size());
+    }
+    jondra::BinaryLoadOptions header;
+    header.has_header = true;
+    header.all_ram = true;
+    const auto header_result = jondra::load_binary_file(path, machine, header);
+    CHECK(header_result.bytes_loaded == 2);
+    CHECK(header_result.run_address == 0x1000);
+    CHECK(machine.memory().read_ram(0x1000) == 0xaa);
+    CHECK(machine.memory().read_ram(0x1001) == 0x55);
+    CHECK(machine.memory().rom_mapped());
+
+    {
+        const std::array<unsigned char, 9> truncated{
+            1, 0x00, 0x40, 0x01, 0x00, 0x11, 1, 0x00, 0x50};
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(truncated.data()),
+                     truncated.size());
+    }
+    const auto unchanged = machine.memory().read_ram(0x4000);
+    bool rejected = false;
+    try {
+        jondra::load_binary_file(path, machine, header);
+    } catch(const std::exception&) {
+        rejected = true;
+    }
+    CHECK(rejected);
+    CHECK(machine.memory().read_ram(0x4000) == unchanged);
+
+    machine.memory().map_rom(false);
+    const auto saved = jondra::save_binary_file(path, machine, 0x1000, 0x1001);
+    CHECK(saved == 2);
+    std::ifstream stream(path, std::ios::binary);
+    CHECK(stream.get() == 0xaa);
+    CHECK(stream.get() == 0x55);
+
+    std::error_code error;
+    std::filesystem::remove(path, error);
+}
+
 } // namespace
 
 int main() {
@@ -96,5 +163,6 @@ int main() {
     test_rom_and_cpu();
     test_machine_ports_and_video();
     test_embedded_roms();
+    test_binary_files();
     std::cout << "All jondra core tests passed\n";
 }

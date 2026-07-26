@@ -38,15 +38,23 @@ void Machine::nmi() {
     initiate_nmi();
 }
 
+void Machine::write_memory(std::uint16_t address, std::uint8_t value,
+                           bool physical_ram) {
+    if(physical_ram)
+        memory_.write_ram(address, value);
+    else
+        memory_.write(address, value);
+    if(address >= 0xd800u)
+        update_vram(address);
+}
+
 z80::fast_u8 Machine::on_read(z80::fast_u16 address) {
     return memory_.read(static_cast<std::uint16_t>(address));
 }
 
 void Machine::on_write(z80::fast_u16 address, z80::fast_u8 value) {
     const auto addr = static_cast<std::uint16_t>(address);
-    memory_.write(addr, static_cast<std::uint8_t>(value));
-    if(addr >= 0xd800u)
-        update_vram(addr);
+    write_memory(addr, static_cast<std::uint8_t>(value));
 }
 
 z80::fast_u8 Machine::on_input(z80::fast_u16 port) {

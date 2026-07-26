@@ -13,6 +13,7 @@ migrated.
 - DMA video address mapping and dynamic vertical resolution;
 - SDL3 window, nearest-neighbour rendering and keyboard input;
 - Dear ImGui menu bar, toolbar, status bar, settings and debugger shell;
+- native file dialogs for loading and saving raw or header-based memory blocks;
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 

@@ -29,6 +29,8 @@ public:
 
     void key(Key key, bool pressed) { keyboard_.set(key, pressed); }
     void nmi();
+    void write_memory(std::uint16_t address, std::uint8_t value,
+                      bool physical_ram = false);
 
     [[nodiscard]] std::span<const std::uint8_t> framebuffer() const noexcept {
         return framebuffer_;
