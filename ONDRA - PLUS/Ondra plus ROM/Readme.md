@@ -1,8 +1,8 @@
 # Ondra+ 16kB ROM
 
-Homebrew 16kB ROM based on SSM-ROM ´87 including modified BASIC EXP v5.0G named SSM BASIC.
+Homebrew 16kB ROM based on SSM-ROM ´87 including modified BASIC EXP v5.0/G named SSM BASIC.
  
-You can read the development story in [this article](http://www.ondraspo186.8u.cz/?p=656) (Czech language)
+You can read the development story in [this article](https://www.ondraspo186.cz/2023/11/08/ondra-navrat-do-budoucnosti-roku-1987/) (Czech language)
 
 ### Docs
 
@@ -12,6 +12,10 @@ I've created a user manual which is the same look as the Ondra's SSM manuals. Se
 
 ### Changelog
 
+v1.5 - fixed interrupt initial mode (the older Ondra+ doesn't start on some hardware at all)
+     - version info added to main screen
+     - minor non-visible improvements to save some bytes
+     
 v1.4 - fixed Melodik mute on start/restart
      - fixed NMI jump
 
