@@ -95,9 +95,9 @@ void test_embedded_roms() {
     const auto rom_path =
         std::filesystem::path(JONDRA_DEFAULT_ROM_DIR) / "Ondra_PLUS_a.rom";
     std::ifstream stream(rom_path, std::ios::binary);
-    const std::vector<std::uint8_t> file(
-        std::istreambuf_iterator<char>(stream),
-        std::istreambuf_iterator<char>());
+    const std::vector<std::uint8_t> file{
+        std::istreambuf_iterator<char>{stream},
+        std::istreambuf_iterator<char>{}};
     const auto embedded = jondra::embedded_rom("Ondra_PLUS_a.rom");
     CHECK(file.size() == embedded.size());
     CHECK(std::equal(file.begin(), file.end(), embedded.begin()));
