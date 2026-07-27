@@ -4,6 +4,7 @@
 #include "jondra/machine.hpp"
 #include "jondra/memory.hpp"
 #include "jondra/snapshot.hpp"
+#include "jondra/tape.hpp"
 
 #include <algorithm>
 #include <array>
@@ -261,6 +262,93 @@ void test_snapshots() {
     std::filesystem::remove(path, error);
 }
 
+void write_test_wav(const std::filesystem::path& path) {
+    const std::array<std::uint8_t, 4> samples{0, 255, 0, 255};
+    std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+    const auto write_u16 = [&stream](std::uint16_t value) {
+        stream.put(static_cast<char>(value));
+        stream.put(static_cast<char>(value >> 8u));
+    };
+    const auto write_u32 = [&stream](std::uint32_t value) {
+        for(unsigned shift = 0; shift < 32; shift += 8)
+            stream.put(static_cast<char>(value >> shift));
+    };
+    stream.write("RIFF", 4);
+    write_u32(36u + samples.size());
+    stream.write("WAVEfmt ", 8);
+    write_u32(16);
+    write_u16(1);
+    write_u16(1);
+    write_u32(1'000);
+    write_u32(1'000);
+    write_u16(1);
+    write_u16(8);
+    stream.write("data", 4);
+    write_u32(samples.size());
+    stream.write(reinterpret_cast<const char*>(samples.data()),
+                 samples.size());
+}
+
+void test_tape() {
+    const auto temporary = std::filesystem::temp_directory_path();
+    const auto wav_path = temporary / "jondra-core-tape-test.wav";
+    const auto csw_path = temporary / "jondra-core-tape-test.csw";
+    write_test_wav(wav_path);
+
+    jondra::Tape tape;
+    tape.open_playback(wav_path);
+    CHECK(tape.mode() == jondra::TapeMode::Playback);
+    CHECK(tape.sample_rate() == 1'000);
+    CHECK(tape.length() == 4);
+    CHECK(!tape.input_high());
+    tape.set_motor(true);
+    tape.advance(2'000, false);
+    CHECK(tape.position() == 1);
+    CHECK(tape.input_high());
+    tape.advance(6'000, false);
+    CHECK(tape.finished());
+    CHECK(!tape.motor_running());
+
+    jondra::Machine machine;
+    machine.tape().open_playback(wav_path);
+    machine.on_output(0x000e, 0x10);
+    CHECK(machine.tape().motor_running());
+    machine.on_output(0x0003, 0x04);
+    machine.on_tick(2'000);
+    CHECK((machine.memory().read(0xe000) & 0x80u) != 0);
+    machine.on_output(0x000e, 0x00);
+    CHECK(!machine.tape().motor_running());
+
+    tape.open_recording(csw_path);
+    tape.set_motor(true);
+    tape.advance(91, false);
+    tape.advance(91, false);
+    tape.advance(91, true);
+    tape.advance(91, true);
+    tape.set_motor(false);
+    CHECK(std::filesystem::file_size(csw_path) > 52);
+
+    jondra::Tape recorded;
+    recorded.open_playback(csw_path);
+    CHECK(recorded.mode() == jondra::TapeMode::Playback);
+    CHECK(recorded.sample_rate() == jondra::Tape::recording_rate);
+    CHECK(recorded.length() == 4);
+
+    const auto repository =
+        std::filesystem::path(JONDRA_DEFAULT_ROM_DIR).parent_path().parent_path();
+    const auto tap_path =
+        repository / "ONDRA - PLUS" / "Ondra mezi balvany" /
+        "Ondra_mezi_balvany_ViLi.tap";
+    jondra::Tape binary_tape;
+    binary_tape.open_playback(tap_path);
+    CHECK(binary_tape.sample_rate() == 500'000);
+    CHECK(binary_tape.length() > 100'000);
+
+    std::error_code error;
+    std::filesystem::remove(wav_path, error);
+    std::filesystem::remove(csw_path, error);
+}
+
 } // namespace
 
 int main() {
@@ -271,5 +359,6 @@ int main() {
     test_embedded_roms();
     test_binary_files();
     test_snapshots();
+    test_tape();
     std::cout << "All jondra core tests passed\n";
 }

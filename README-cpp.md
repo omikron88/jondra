@@ -15,12 +15,14 @@ migrated.
 - Dear ImGui menu bar, toolbar, status bar, settings and debugger shell;
 - native file dialogs for loading and saving raw or header-based memory blocks;
 - Java-compatible OSN v1/v2 snapshot loading and OSN v2 snapshot saving;
+- cycle-timed tape playback from WAV, CSW and Ondra TAP files, plus CSW
+  recording;
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 
-Audio, tape formats, rewind and the full graphical debugger still use the Java
-implementation and will be migrated in later milestones. Their UI entries are
-shown but disabled until the corresponding backend is available.
+Audio output, timeline rewind and the full graphical debugger still use the
+Java implementation and will be migrated in later milestones. Their UI entries
+are shown but disabled until the corresponding backend is available.
 
 ## Build
 
@@ -66,6 +68,14 @@ The default ROM is BASIC. Other bundled variants can be selected with
 The original mappings are retained: Shift is Shift, Symbols is Alt, Control is
 Control, Numbers is Tab, and the Czech key is `=`. Arrow keys map directly.
 Numpad 0/2/8/4/6 map to joystick fire/down/up/left/right.
+
+## Tape
+
+Use **File > Open tape for load** for WAV, CSW or Ondra TAP images. Use
+**Open tape for recording** to create a CSW recording. Playback and recording
+start and stop automatically when the emulated software switches the cassette
+motor through port A0. The status bar shows `ready`, `play`, `record` or `end`.
+The File menu also provides rewind and eject actions.
 
 Emulator controls:
 

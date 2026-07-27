@@ -25,6 +25,7 @@ struct UiState {
     bool quit_requested = false;
     bool binary_dialog_was_running = false;
     bool snapshot_dialog_was_running = false;
+    bool tape_dialog_was_running = false;
     bool native_file_dialog_open = false;
     bool binary_has_header = false;
     bool binary_run_after_load = false;
@@ -37,6 +38,8 @@ struct UiState {
     std::string binary_save_path;
     std::string snapshot_load_path;
     std::string snapshot_save_path = "snapshot.osn";
+    std::string tape_load_path;
+    std::string tape_save_path = "recording.csw";
     std::string status = "Ready";
 };
 

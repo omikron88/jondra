@@ -12,6 +12,9 @@ Machine::Machine()
 void Machine::reset(bool dirty) {
     Base::on_reset();
     keyboard_.reset();
+    tape_.set_motor(false);
+    tape_.rewind();
+    keyboard_.set_tape_input(tape_.input_high());
     memory_.reset(dirty);
     port_a0_ = port_a1_ = port_a3_ = 0;
     ticks_ = 0;
@@ -78,10 +81,13 @@ void Machine::on_output(z80::fast_u16 port, z80::fast_u8 value) {
         port_a0_ = v;
     if((p & 0x02u) == 0)
         port_a1_ = v;
+    tape_.set_motor((port_a0_ & 0x10u) != 0);
 }
 
 void Machine::on_tick(unsigned count) {
     ticks_ += count;
+    tape_.advance(count, (port_a3_ & 0x08u) != 0);
+    keyboard_.set_tape_input(tape_.input_high());
 }
 
 void Machine::restore_snapshot_peripherals(std::uint8_t port_a0,
@@ -102,6 +108,8 @@ void Machine::restore_snapshot_peripherals(std::uint8_t port_a0,
         static_cast<std::uint64_t>(255u - resolution_) * 128u;
     frame_ticks_ =
         dma_timing_on_ ? (57u * 128u + correction) : default_frame_ticks;
+    tape_.set_motor((port_a0_ & 0x10u) != 0);
+    keyboard_.set_tape_input(tape_.input_high());
     rebuild_display_map();
     refresh_display();
 }

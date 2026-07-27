@@ -29,6 +29,7 @@ set(JONDRA_CORE_SOURCES
     cpp/src/machine.cpp
     cpp/src/memory.cpp
     cpp/src/snapshot.cpp
+    cpp/src/tape.cpp
 )
 
 if(JONDRA_EMBED_ROMS)

@@ -29,7 +29,9 @@ enum class FileDialogKind {
     BinaryLoad,
     BinarySave,
     SnapshotLoad,
-    SnapshotSave
+    SnapshotSave,
+    TapeLoad,
+    TapeSave
 };
 
 struct FileDialogContext {
@@ -76,13 +78,20 @@ std::filesystem::path path_from_utf8(std::string_view text) {
 
 bool is_load_dialog(FileDialogKind kind) {
     return kind == FileDialogKind::BinaryLoad ||
-           kind == FileDialogKind::SnapshotLoad;
+           kind == FileDialogKind::SnapshotLoad ||
+           kind == FileDialogKind::TapeLoad;
 }
 
 void finish_snapshot_dialog(bool& paused, UiState& state) {
     if(state.snapshot_dialog_was_running)
         paused = false;
     state.snapshot_dialog_was_running = false;
+}
+
+void finish_tape_dialog(bool& paused, UiState& state) {
+    if(state.tape_dialog_was_running)
+        paused = false;
+    state.tape_dialog_was_running = false;
 }
 
 void process_file_dialog_results(
@@ -102,7 +111,8 @@ void process_file_dialog_results(
                 state.binary_load_path = std::move(*result.path);
             } else if(result.kind == FileDialogKind::BinarySave) {
                 state.binary_save_path = std::move(*result.path);
-            } else {
+            } else if(result.kind == FileDialogKind::SnapshotLoad ||
+                      result.kind == FileDialogKind::SnapshotSave) {
                 try {
                     auto path = path_from_utf8(*result.path);
                     if(result.kind == FileDialogKind::SnapshotLoad) {
@@ -121,11 +131,32 @@ void process_file_dialog_results(
                     state.status =
                         std::string("Snapshot failed: ") + error.what();
                 }
+            } else {
+                try {
+                    const auto path = path_from_utf8(*result.path);
+                    if(result.kind == FileDialogKind::TapeLoad) {
+                        state.tape_load_path = std::move(*result.path);
+                        machine.tape().open_playback(path);
+                        state.status = "Tape loaded: " +
+                            std::string(machine.tape().filename());
+                    } else {
+                        state.tape_save_path = std::move(*result.path);
+                        machine.tape().open_recording(path);
+                        state.status = "Tape recording prepared: " +
+                            std::string(machine.tape().filename());
+                    }
+                } catch(const std::exception& error) {
+                    state.status =
+                        std::string("Tape failed: ") + error.what();
+                }
             }
         }
         if(result.kind == FileDialogKind::SnapshotLoad ||
            result.kind == FileDialogKind::SnapshotSave)
             finish_snapshot_dialog(paused, state);
+        if(result.kind == FileDialogKind::TapeLoad ||
+           result.kind == FileDialogKind::TapeSave)
+            finish_tape_dialog(paused, state);
     }
 }
 
@@ -142,18 +173,35 @@ void show_native_file_dialog(SDL_Window* window, UiState& state,
         {"JOndra snapshots", "osn"},
         {"All files", "*"},
     };
+    static constexpr SDL_DialogFileFilter tape_load_filters[]{
+        {"Ondra tapes", "wav;csw;tap"},
+        {"All files", "*"},
+    };
+    static constexpr SDL_DialogFileFilter tape_save_filters[]{
+        {"Compressed Square Wave", "csw"},
+        {"All files", "*"},
+    };
     const bool snapshot = kind == FileDialogKind::SnapshotLoad ||
                           kind == FileDialogKind::SnapshotSave;
-    const auto* filters = snapshot ? snapshot_filters : binary_filters;
-    const auto filter_count = snapshot
-        ? static_cast<int>(std::size(snapshot_filters))
-        : static_cast<int>(std::size(binary_filters));
+    const bool tape_load = kind == FileDialogKind::TapeLoad;
+    const bool tape_save = kind == FileDialogKind::TapeSave;
+    const auto* filters = snapshot ? snapshot_filters
+                        : tape_load ? tape_load_filters
+                        : tape_save ? tape_save_filters
+                                    : binary_filters;
+    const auto filter_count =
+        snapshot ? static_cast<int>(std::size(snapshot_filters))
+      : tape_load ? static_cast<int>(std::size(tape_load_filters))
+      : tape_save ? static_cast<int>(std::size(tape_save_filters))
+                  : static_cast<int>(std::size(binary_filters));
     const auto& current_path = [&]() -> const std::string& {
         switch(kind) {
         case FileDialogKind::BinaryLoad: return state.binary_load_path;
         case FileDialogKind::BinarySave: return state.binary_save_path;
         case FileDialogKind::SnapshotLoad: return state.snapshot_load_path;
         case FileDialogKind::SnapshotSave: return state.snapshot_save_path;
+        case FileDialogKind::TapeLoad: return state.tape_load_path;
+        case FileDialogKind::TapeSave: return state.tape_save_path;
         }
         return state.binary_load_path;
     }();
@@ -185,14 +233,6 @@ std::string_view rom_name(RomType type) {
             return name;
     }
     return "Unknown";
-}
-
-void unavailable_button(const char* label) {
-    ImGui::BeginDisabled();
-    ImGui::Button(label);
-    ImGui::EndDisabled();
-    if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-        ImGui::SetTooltip("This feature has not been ported yet.");
 }
 
 void reset_machine(Machine& machine, bool& paused, UiState& state) {
@@ -241,13 +281,37 @@ void open_snapshot_dialog(SDL_Window* window, bool load, bool& paused,
         load ? FileDialogKind::SnapshotLoad : FileDialogKind::SnapshotSave);
 }
 
-void draw_file_menu(SDL_Window* window, bool& paused, UiState& state) {
+void open_tape_dialog(SDL_Window* window, bool load, bool& paused,
+                      UiState& state) {
+    if(state.native_file_dialog_open)
+        return;
+    state.tape_dialog_was_running = !paused;
+    paused = true;
+    state.status = load ? "Select a tape to load"
+                        : "Select where to record the tape";
+    show_native_file_dialog(
+        window, state,
+        load ? FileDialogKind::TapeLoad : FileDialogKind::TapeSave);
+}
+
+void draw_file_menu(SDL_Window* window, Machine& machine, bool& paused,
+                    UiState& state) {
     if(!ImGui::BeginMenu("File"))
         return;
 
-    ImGui::BeginDisabled();
-    ImGui::MenuItem("Open tape...");
-    ImGui::MenuItem("Save tape...");
+    if(ImGui::MenuItem("Open tape for load..."))
+        open_tape_dialog(window, true, paused, state);
+    if(ImGui::MenuItem("Open tape for recording..."))
+        open_tape_dialog(window, false, paused, state);
+    ImGui::BeginDisabled(machine.tape().mode() == jondra::TapeMode::Empty);
+    if(ImGui::MenuItem("Rewind tape")) {
+        machine.tape().rewind();
+        state.status = "Tape rewound";
+    }
+    if(ImGui::MenuItem("Eject tape")) {
+        machine.tape().close();
+        state.status = "Tape ejected";
+    }
     ImGui::EndDisabled();
     ImGui::Separator();
     if(ImGui::MenuItem("Open snapshot..."))
@@ -306,7 +370,7 @@ void draw_menu_bar(SDL_Window* window, Machine& machine, bool& paused,
     if(!ImGui::BeginMainMenuBar())
         return;
 
-    draw_file_menu(window, paused, state);
+    draw_file_menu(window, machine, paused, state);
     draw_control_menu(window, machine, paused, state);
     draw_tools_menu(state);
     if(ImGui::BeginMenu("Help")) {
@@ -342,7 +406,11 @@ void draw_toolbar(SDL_Window* window, Machine& machine, bool& paused,
     ImGui::SameLine();
     ImGui::TextDisabled("|");
     ImGui::SameLine();
-    unavailable_button("Open tape");
+    if(ImGui::Button("Load tape"))
+        open_tape_dialog(window, true, paused, state);
+    ImGui::SameLine();
+    if(ImGui::Button("Record tape"))
+        open_tape_dialog(window, false, paused, state);
     ImGui::SameLine();
     if(ImGui::Button("Open snapshot"))
         open_snapshot_dialog(window, true, paused, state);
@@ -520,12 +588,22 @@ void draw_status_bar(const Machine& machine, bool paused, const UiState& state) 
     ImGui::SameLine();
     ImGui::TextUnformatted(paused ? "PAUSED" : "RUNNING");
     ImGui::SameLine();
-    ImGui::Text("| ROM: %.*s | DMA: %s | T-states: %llu | %s",
+    const auto& tape = machine.tape();
+    const char* tape_state = "empty";
+    if(tape.mode() == jondra::TapeMode::Playback)
+        tape_state = tape.finished() ? "end" :
+                     tape.motor_running() ? "play" : "ready";
+    else if(tape.mode() == jondra::TapeMode::Recording)
+        tape_state = tape.motor_running() ? "record" : "record ready";
+    const auto status =
+        tape.error().empty() ? std::string_view(state.status) : tape.error();
+    ImGui::Text("| ROM: %.*s | DMA: %s | TAPE: %s | T-states: %llu | %s",
                 static_cast<int>(rom_name(state.rom_type).size()),
                 rom_name(state.rom_type).data(),
                 machine.dma_enabled() ? "on" : "off",
+                tape_state,
                 static_cast<unsigned long long>(machine.ticks()),
-                state.status.c_str());
+                status.data());
 }
 
 void draw_main_window(SDL_Window* window, SDL_Texture* texture,

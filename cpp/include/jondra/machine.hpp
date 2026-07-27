@@ -2,6 +2,7 @@
 
 #include "jondra/keyboard.hpp"
 #include "jondra/memory.hpp"
+#include "jondra/tape.hpp"
 
 #include <array>
 #include <cstdint>
@@ -37,6 +38,8 @@ public:
     }
     [[nodiscard]] Memory& memory() noexcept { return memory_; }
     [[nodiscard]] const Memory& memory() const noexcept { return memory_; }
+    [[nodiscard]] Tape& tape() noexcept { return tape_; }
+    [[nodiscard]] const Tape& tape() const noexcept { return tape_; }
     [[nodiscard]] std::uint64_t ticks() const noexcept { return ticks_; }
     [[nodiscard]] bool dma_enabled() const noexcept { return dma_enabled_; }
     [[nodiscard]] RomType rom_type() const noexcept { return rom_type_; }
@@ -67,6 +70,7 @@ private:
 
     Keyboard keyboard_;
     Memory memory_;
+    Tape tape_;
     std::array<std::int16_t, 0x2800> display_map_{};
     std::array<std::uint8_t, screen_width * screen_height / 8> framebuffer_{};
 
