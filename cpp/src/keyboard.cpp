@@ -73,7 +73,10 @@ void Keyboard::set(Key key, bool pressed) {
 }
 
 std::uint8_t Keyboard::read(std::uint16_t address) const {
-    return matrix_[address & 0xffu];
+    auto value = matrix_[address & 0xffu];
+    if(melodik_present_ && (address & 0xffu) == 0x0fu)
+        value &= 0xdfu;
+    return value;
 }
 
 void Keyboard::set_tape_input(bool high) {

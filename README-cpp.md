@@ -17,12 +17,13 @@ migrated.
 - Java-compatible OSN v1/v2 snapshot loading and OSN v2 snapshot saving;
 - cycle-timed tape playback from WAV, CSW and Ondra TAP files, plus CSW
   recording;
+- SDL3 audio output, the seven built-in Ondra tones and the optional
+  SN76489-based Melodik module;
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 
-Audio output, timeline rewind and the full graphical debugger still use the
-Java implementation and will be migrated in later milestones. Their UI entries
-are shown but disabled until the corresponding backend is available.
+Timeline rewind and the full graphical debugger still use the Java
+implementation and will be migrated in later milestones.
 
 ## Build
 
@@ -76,6 +77,13 @@ Use **File > Open tape for load** for WAV, CSW or Ondra TAP images. Use
 start and stop automatically when the emulated software switches the cassette
 motor through port A0. The status bar shows `ready`, `play`, `record` or `end`.
 The File menu also provides rewind and eject actions.
+
+## Audio
+
+The built-in speaker reproduces the seven original fixed tones selected by
+bits 5-7 of port A0. The optional Melodik module emulates its SN76489 tone and
+noise generator at 2 MHz. Both sources are mixed into a 44.1 kHz mono SDL3
+audio stream. They can be enabled independently in **Tools > Settings**.
 
 Emulator controls:
 

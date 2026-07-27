@@ -12,6 +12,8 @@ Machine::Machine()
 void Machine::reset(bool dirty) {
     Base::on_reset();
     keyboard_.reset();
+    keyboard_.set_melodik_present(audio_.melodik_enabled());
+    audio_.reset();
     tape_.set_motor(false);
     tape_.rewind();
     keyboard_.set_tape_input(tape_.input_high());
@@ -33,9 +35,11 @@ void Machine::load_rom(RomType type, const std::filesystem::path& directory) {
 
 void Machine::run_frame() {
     const auto target = ticks_ + frame_ticks_;
+    audio_.begin_frame(ticks_);
     on_handle_active_int();
     while(ticks_ < target)
         on_step();
+    audio_.end_frame();
 }
 
 void Machine::nmi() {
@@ -79,8 +83,13 @@ void Machine::on_output(z80::fast_u16 port, z80::fast_u8 value) {
     }
     if((p & 0x01u) == 0)
         port_a0_ = v;
-    if((p & 0x02u) == 0)
+    if((p & 0x01u) == 0)
+        audio_.select_builtin(static_cast<std::uint8_t>(v >> 5u), ticks_);
+    if((p & 0x02u) == 0) {
         port_a1_ = v;
+        if((port_a0_ & 0x08u) != 0)
+            audio_.write_melodik(v, ticks_);
+    }
     tape_.set_motor((port_a0_ & 0x10u) != 0);
 }
 
@@ -108,6 +117,8 @@ void Machine::restore_snapshot_peripherals(std::uint8_t port_a0,
         static_cast<std::uint64_t>(255u - resolution_) * 128u;
     frame_ticks_ =
         dma_timing_on_ ? (57u * 128u + correction) : default_frame_ticks;
+    audio_.select_builtin(
+        static_cast<std::uint8_t>(port_a0_ >> 5u), ticks_);
     tape_.set_motor((port_a0_ & 0x10u) != 0);
     keyboard_.set_tape_input(tape_.input_high());
     rebuild_display_map();

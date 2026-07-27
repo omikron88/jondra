@@ -28,6 +28,9 @@ public:
     void set(Key key, bool pressed);
     [[nodiscard]] std::uint8_t read(std::uint16_t address) const;
     void set_tape_input(bool high);
+    void set_melodik_present(bool present) noexcept {
+        melodik_present_ = present;
+    }
 
 private:
     struct Position {
@@ -38,6 +41,7 @@ private:
     static std::optional<Position> position(Key key);
 
     std::array<std::uint8_t, matrix_size> matrix_{};
+    bool melodik_present_ = true;
 };
 
 } // namespace jondra

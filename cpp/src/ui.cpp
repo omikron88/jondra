@@ -766,14 +766,17 @@ void draw_settings(SDL_Window* window, Machine& machine,
         ImGui::Checkbox("Scanlines", &state.scanlines);
 
         ImGui::Separator();
-        ImGui::BeginDisabled();
-        bool sound = false;
-        bool melodik = false;
-        ImGui::Checkbox("Sound", &sound);
-        ImGui::Checkbox("Melodik", &melodik);
-        ImGui::EndDisabled();
-        if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetTooltip("Audio has not been ported yet.");
+        bool sound = machine.audio().builtin_enabled();
+        if(ImGui::Checkbox("Built-in sound", &sound)) {
+            machine.set_builtin_sound_enabled(sound);
+            state.status = sound ? "Built-in sound enabled"
+                                 : "Built-in sound disabled";
+        }
+        bool melodik = machine.audio().melodik_enabled();
+        if(ImGui::Checkbox("Melodik (SN76489)", &melodik)) {
+            machine.set_melodik_enabled(melodik);
+            state.status = melodik ? "Melodik enabled" : "Melodik disabled";
+        }
     }
     ImGui::End();
 }

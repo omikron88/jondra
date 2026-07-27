@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        if(!SDL_Init(SDL_INIT_VIDEO))
+        if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
             throw std::runtime_error(SDL_GetError());
 
         SDL_Window* window = nullptr;
@@ -142,10 +142,38 @@ int main(int argc, char** argv) {
         jondra::UiState ui_state;
         ui_state.rom_type = rom_type;
 
+        SDL_AudioSpec audio_spec{};
+        audio_spec.format = SDL_AUDIO_S16;
+        audio_spec.channels = 1;
+        audio_spec.freq =
+            static_cast<int>(jondra::AudioGenerator::sample_rate);
+        SDL_AudioStream* audio_stream = SDL_OpenAudioDeviceStream(
+            SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audio_spec, nullptr, nullptr);
+        if(audio_stream == nullptr) {
+            ui_state.status =
+                std::string("Audio disabled: ") + SDL_GetError();
+        } else {
+            const std::array<std::int16_t,
+                             jondra::AudioGenerator::samples_per_frame>
+                initial_silence{};
+            SDL_PutAudioStreamData(
+                audio_stream, initial_silence.data(),
+                static_cast<int>(initial_silence.size() *
+                                 sizeof(initial_silence.front())));
+        }
+        if(audio_stream != nullptr &&
+           !SDL_ResumeAudioStreamDevice(audio_stream)) {
+            ui_state.status =
+                std::string("Audio disabled: ") + SDL_GetError();
+            SDL_DestroyAudioStream(audio_stream);
+            audio_stream = nullptr;
+        }
+
         std::array<std::uint32_t,
                    jondra::Machine::screen_width * jondra::Machine::screen_height> pixels{};
         bool running = true;
         bool paused = false;
+        bool audio_was_paused = false;
         auto deadline = std::chrono::steady_clock::now();
 
         while(running) {
@@ -176,8 +204,22 @@ int main(int argc, char** argv) {
             }
 
             running &= !ui_state.quit_requested;
-            if(!paused)
+            if(!paused) {
                 machine.run_frame();
+                if(audio_stream != nullptr) {
+                    const auto samples = machine.audio().frame();
+                    if(!SDL_PutAudioStreamData(
+                           audio_stream, samples.data(),
+                           static_cast<int>(
+                               samples.size_bytes()))) {
+                        ui_state.status =
+                            std::string("Audio failed: ") + SDL_GetError();
+                    }
+                }
+            } else if(audio_stream != nullptr && !audio_was_paused) {
+                SDL_ClearAudioStream(audio_stream);
+            }
+            audio_was_paused = paused;
 
             const auto packed = machine.framebuffer();
             for(std::size_t byte = 0; byte < packed.size(); ++byte) {
@@ -214,6 +256,8 @@ int main(int argc, char** argv) {
         ImGui_ImplSDLRenderer3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
         ImGui::DestroyContext();
+        if(audio_stream != nullptr)
+            SDL_DestroyAudioStream(audio_stream);
         SDL_DestroyTexture(texture);
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);

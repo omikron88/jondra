@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jondra/audio.hpp"
 #include "jondra/keyboard.hpp"
 #include "jondra/memory.hpp"
 #include "jondra/tape.hpp"
@@ -38,6 +39,10 @@ public:
     }
     [[nodiscard]] Memory& memory() noexcept { return memory_; }
     [[nodiscard]] const Memory& memory() const noexcept { return memory_; }
+    [[nodiscard]] AudioGenerator& audio() noexcept { return audio_; }
+    [[nodiscard]] const AudioGenerator& audio() const noexcept {
+        return audio_;
+    }
     [[nodiscard]] Tape& tape() noexcept { return tape_; }
     [[nodiscard]] const Tape& tape() const noexcept { return tape_; }
     [[nodiscard]] std::uint64_t ticks() const noexcept { return ticks_; }
@@ -48,6 +53,13 @@ public:
     [[nodiscard]] std::uint8_t port_a3() const noexcept { return port_a3_; }
     [[nodiscard]] std::uint8_t resolution() const noexcept {
         return resolution_;
+    }
+    void set_builtin_sound_enabled(bool enabled) noexcept {
+        audio_.set_builtin_enabled(enabled);
+    }
+    void set_melodik_enabled(bool enabled) noexcept {
+        audio_.set_melodik_enabled(enabled);
+        keyboard_.set_melodik_present(enabled);
     }
 
     void restore_snapshot_peripherals(std::uint8_t port_a0,
@@ -70,6 +82,7 @@ private:
 
     Keyboard keyboard_;
     Memory memory_;
+    AudioGenerator audio_;
     Tape tape_;
     std::array<std::int16_t, 0x2800> display_map_{};
     std::array<std::uint8_t, screen_width * screen_height / 8> framebuffer_{};

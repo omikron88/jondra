@@ -24,17 +24,25 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(z80)
 
 set(JONDRA_CORE_SOURCES
+    cpp/src/audio.cpp
     cpp/src/binary_file.cpp
     cpp/src/keyboard.cpp
     cpp/src/machine.cpp
     cpp/src/memory.cpp
     cpp/src/snapshot.cpp
+    cpp/src/sn76489.cpp
     cpp/src/tape.cpp
 )
 
+set(JONDRA_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+include(cmake/EmbedSound.cmake)
+set(JONDRA_EMBEDDED_SOUND_SOURCE
+    "${JONDRA_GENERATED_DIR}/embedded_sound.cpp")
+jondra_generate_embedded_sound("${JONDRA_EMBEDDED_SOUND_SOURCE}")
+list(APPEND JONDRA_CORE_SOURCES "${JONDRA_EMBEDDED_SOUND_SOURCE}")
+
 if(JONDRA_EMBED_ROMS)
     include(cmake/EmbedRoms.cmake)
-    set(JONDRA_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
     set(JONDRA_EMBEDDED_ROMS_SOURCE "${JONDRA_GENERATED_DIR}/embedded_roms.cpp")
     jondra_generate_embedded_roms("${JONDRA_EMBEDDED_ROMS_SOURCE}")
     list(APPEND JONDRA_CORE_SOURCES "${JONDRA_EMBEDDED_ROMS_SOURCE}")

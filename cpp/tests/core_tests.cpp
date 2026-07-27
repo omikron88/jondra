@@ -1,5 +1,7 @@
+#include "jondra/audio.hpp"
 #include "jondra/binary_file.hpp"
 #include "jondra/embedded_roms.hpp"
+#include "jondra/embedded_sound.hpp"
 #include "jondra/keyboard.hpp"
 #include "jondra/machine.hpp"
 #include "jondra/memory.hpp"
@@ -28,12 +30,71 @@ void check(bool condition, const char* expression, int line) {
 void test_keyboard_matrix() {
     jondra::Keyboard keyboard;
     CHECK(keyboard.read(0) == 0xff);
+    CHECK((keyboard.read(0x0f) & 0x20u) == 0);
+    keyboard.set_melodik_present(false);
+    CHECK((keyboard.read(0x0f) & 0x20u) != 0);
+    keyboard.set_melodik_present(true);
     keyboard.set(jondra::Key::Q, true);
     CHECK(keyboard.read(0) == 0xef);
     keyboard.set(jondra::Key::Q, false);
     CHECK(keyboard.read(0) == 0xff);
     keyboard.set(jondra::Key::JoyRight, true);
     CHECK(keyboard.read(9) == 0xfe);
+}
+
+void test_audio() {
+    static constexpr std::array<std::size_t, 7> sample_sizes{
+        236, 150, 112, 72, 64, 62, 56};
+    for(unsigned tone = 1; tone <= sample_sizes.size(); ++tone)
+        CHECK(jondra::embedded_sound_sample(tone).size() ==
+              sample_sizes[tone - 1]);
+    CHECK(jondra::embedded_sound_sample(0).empty());
+
+    jondra::AudioGenerator audio;
+    audio.begin_frame(0);
+    audio.select_builtin(1, jondra::AudioGenerator::frame_ticks / 2u);
+    audio.end_frame();
+    const auto delayed_tone = audio.frame();
+    CHECK(delayed_tone.size() ==
+          jondra::AudioGenerator::samples_per_frame);
+    CHECK(std::all_of(delayed_tone.begin(),
+                      delayed_tone.begin() + delayed_tone.size() / 2,
+                      [](std::int16_t value) { return value == 0; }));
+    CHECK(std::any_of(delayed_tone.begin() + delayed_tone.size() / 2,
+                     delayed_tone.end(),
+                     [](std::int16_t value) { return value != 0; }));
+
+    audio.reset();
+    audio.set_builtin_enabled(false);
+    audio.begin_frame(0);
+    // Tone channel 0: period 100, maximum volume.
+    audio.write_melodik(0x84, 0);
+    audio.write_melodik(0x06, 0);
+    audio.write_melodik(0x90, 0);
+    audio.end_frame();
+    const auto sn_tone = audio.frame();
+    CHECK(std::any_of(sn_tone.begin(), sn_tone.end(),
+                      [](std::int16_t value) { return value != 0; }));
+    unsigned rising_edges = 0;
+    for(std::size_t i = 1; i < sn_tone.size(); ++i) {
+        if(sn_tone[i - 1] <= 0 && sn_tone[i] > 0)
+            ++rising_edges;
+    }
+    // 2 MHz / (32 * 100) = 625 Hz, or about 12.5 periods per frame.
+    CHECK(rising_edges >= 11 && rising_edges <= 14);
+
+    jondra::Sn76489 noise;
+    noise.write(0xe4); // White noise, fastest fixed shift rate.
+    noise.write(0xf0); // Maximum noise-channel volume.
+    bool positive_noise = false;
+    bool negative_noise = false;
+    for(unsigned i = 0; i < 2'000; ++i) {
+        const auto sample = noise.next_sample();
+        positive_noise |= sample > 0;
+        negative_noise |= sample < 0;
+    }
+    CHECK(positive_noise);
+    CHECK(negative_noise);
 }
 
 void test_memory_mapping() {
@@ -74,6 +135,10 @@ void test_machine_ports_and_video() {
     CHECK(!machine.memory().rom_mapped());
     CHECK(machine.memory().io_mapped());
     CHECK(!machine.dma_enabled());
+    CHECK((machine.memory().read(0xe00f) & 0x20u) == 0);
+    machine.set_melodik_enabled(false);
+    CHECK((machine.memory().read(0xe00f) & 0x20u) != 0);
+    machine.set_melodik_enabled(true);
 
     machine.on_output(0x0000, 0x01);
     CHECK(machine.memory().rom_mapped());
@@ -379,6 +444,7 @@ void test_tape() {
 
 int main() {
     test_keyboard_matrix();
+    test_audio();
     test_memory_mapping();
     test_rom_and_cpu();
     test_machine_ports_and_video();
