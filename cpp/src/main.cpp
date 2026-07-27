@@ -1,3 +1,4 @@
+#include "jondra/app_settings.hpp"
 #include "jondra/machine.hpp"
 #include "jondra/ui.hpp"
 
@@ -15,6 +16,7 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <thread>
 
@@ -81,19 +83,25 @@ jondra::RomType parse_rom(std::string_view value) {
     throw std::runtime_error("Unknown ROM type: " + std::string(value));
 }
 
+std::filesystem::path path_from_utf8(std::string_view text) {
+    const auto* begin = reinterpret_cast<const char8_t*>(text.data());
+    return std::filesystem::path(
+        std::u8string(begin, begin + text.size()));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
     try {
         std::filesystem::path rom_directory = JONDRA_DEFAULT_ROM_DIR;
-        auto rom_type = jondra::RomType::Basic;
+        std::optional<jondra::RomType> rom_override;
 
         for(int i = 1; i < argc; ++i) {
             const std::string_view argument(argv[i]);
             if(argument == "--rom-dir" && i + 1 < argc)
                 rom_directory = argv[++i];
             else if(argument == "--rom" && i + 1 < argc)
-                rom_type = parse_rom(argv[++i]);
+                rom_override = parse_rom(argv[++i]);
             else if(argument == "--help") {
                 std::cout << "Usage: jondra [--rom basic|tesla|vili|plus] [--rom-dir PATH]\n"
                              "F5 pause, F11 NMI, F12 reset, Escape quit\n";
@@ -106,10 +114,31 @@ int main(int argc, char** argv) {
         if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
             throw std::runtime_error(SDL_GetError());
 
+        jondra::AppSettings settings;
+        std::filesystem::path settings_path;
+        std::string settings_warning;
+        if(char* preference_path = SDL_GetPrefPath("JOndra", "JOndra")) {
+            settings_path =
+                path_from_utf8(preference_path) / "jondra.ini";
+            SDL_free(preference_path);
+            try {
+                settings = jondra::load_app_settings(settings_path);
+            } catch(const std::exception& error) {
+                settings_warning =
+                    std::string("Settings not loaded: ") + error.what();
+            }
+        } else {
+            settings_warning =
+                std::string("Settings disabled: ") + SDL_GetError();
+        }
+        if(rom_override)
+            settings.rom_type = *rom_override;
+        const auto rom_type = settings.rom_type;
+
         SDL_Window* window = nullptr;
         SDL_Renderer* renderer = nullptr;
         if(!SDL_CreateWindowAndRenderer(
-                "JOndra C++", 1120, 820,
+                "JOndra C++", settings.window_width, settings.window_height,
                 SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY,
                 &window, &renderer))
             throw std::runtime_error(SDL_GetError());
@@ -139,8 +168,26 @@ int main(int argc, char** argv) {
         jondra::Machine machine;
         machine.load_rom(rom_type, rom_directory);
         machine.reset();
+        machine.set_builtin_sound_enabled(settings.builtin_sound);
+        machine.set_melodik_enabled(settings.melodik);
         jondra::UiState ui_state;
         ui_state.rom_type = rom_type;
+        ui_state.fullscreen = settings.fullscreen;
+        ui_state.scanlines = settings.scanlines;
+        ui_state.binary_load_path = settings.binary_load_path;
+        ui_state.binary_save_path = settings.binary_save_path;
+        ui_state.snapshot_load_path = settings.snapshot_load_path;
+        ui_state.snapshot_save_path = settings.snapshot_save_path;
+        ui_state.tape_load_path = settings.tape_load_path;
+        ui_state.tape_save_path = settings.tape_save_path;
+        if(!settings_warning.empty())
+            ui_state.status = settings_warning;
+        if(ui_state.fullscreen &&
+           !SDL_SetWindowFullscreen(window, true)) {
+            ui_state.fullscreen = false;
+            ui_state.status =
+                std::string("Fullscreen failed: ") + SDL_GetError();
+        }
 
         SDL_AudioSpec audio_spec{};
         audio_spec.format = SDL_AUDIO_S16;
@@ -246,11 +293,35 @@ int main(int argc, char** argv) {
             ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
             SDL_RenderPresent(renderer);
 
+            if(!ui_state.fullscreen) {
+                SDL_GetWindowSize(window, &settings.window_width,
+                                  &settings.window_height);
+            }
             deadline += std::chrono::milliseconds(20);
             std::this_thread::sleep_until(deadline);
             const auto now = std::chrono::steady_clock::now();
             if(deadline + std::chrono::milliseconds(100) < now)
                 deadline = now;
+        }
+
+        settings.rom_type = ui_state.rom_type;
+        settings.fullscreen = ui_state.fullscreen;
+        settings.scanlines = ui_state.scanlines;
+        settings.builtin_sound = machine.audio().builtin_enabled();
+        settings.melodik = machine.audio().melodik_enabled();
+        settings.binary_load_path = ui_state.binary_load_path;
+        settings.binary_save_path = ui_state.binary_save_path;
+        settings.snapshot_load_path = ui_state.snapshot_load_path;
+        settings.snapshot_save_path = ui_state.snapshot_save_path;
+        settings.tape_load_path = ui_state.tape_load_path;
+        settings.tape_save_path = ui_state.tape_save_path;
+        if(!settings_path.empty()) {
+            try {
+                jondra::save_app_settings(settings_path, settings);
+            } catch(const std::exception& error) {
+                std::cerr << "jondra: settings not saved: "
+                          << error.what() << '\n';
+            }
         }
 
         ImGui_ImplSDLRenderer3_Shutdown();

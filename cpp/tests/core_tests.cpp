@@ -1,4 +1,5 @@
 #include "jondra/audio.hpp"
+#include "jondra/app_settings.hpp"
 #include "jondra/binary_file.hpp"
 #include "jondra/embedded_roms.hpp"
 #include "jondra/embedded_sound.hpp"
@@ -95,6 +96,56 @@ void test_audio() {
     }
     CHECK(positive_noise);
     CHECK(negative_noise);
+}
+
+void test_app_settings() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "jondra-settings-test.ini";
+    std::error_code error;
+    std::filesystem::remove(path, error);
+
+    jondra::AppSettings settings;
+    settings.rom_type = jondra::RomType::Plus;
+    settings.fullscreen = true;
+    settings.scanlines = true;
+    settings.builtin_sound = false;
+    settings.melodik = false;
+    settings.window_width = 1365;
+    settings.window_height = 777;
+    settings.binary_load_path = R"(C:\Tape files\"demo".bin)";
+    settings.snapshot_save_path = "saved snapshots/test.osn";
+    settings.tape_load_path = "tapes/demo.tap";
+    jondra::save_app_settings(path, settings);
+
+    const auto loaded = jondra::load_app_settings(path);
+    CHECK(loaded.rom_type == jondra::RomType::Plus);
+    CHECK(loaded.fullscreen);
+    CHECK(loaded.scanlines);
+    CHECK(!loaded.builtin_sound);
+    CHECK(!loaded.melodik);
+    CHECK(loaded.window_width == 1365);
+    CHECK(loaded.window_height == 777);
+    CHECK(loaded.binary_load_path == settings.binary_load_path);
+    CHECK(loaded.snapshot_save_path == settings.snapshot_save_path);
+    CHECK(loaded.tape_load_path == settings.tape_load_path);
+
+    {
+        std::ofstream stream(path, std::ios::app);
+        stream << "rom=invalid\n"
+               << "window_width=-1\n"
+               << "fullscreen=perhaps\n"
+               << "unknown_key=ignored\n";
+    }
+    const auto with_invalid_values = jondra::load_app_settings(path);
+    CHECK(with_invalid_values.rom_type == jondra::RomType::Plus);
+    CHECK(with_invalid_values.window_width == 1365);
+    CHECK(with_invalid_values.fullscreen);
+
+    std::filesystem::remove(path, error);
+    const auto defaults = jondra::load_app_settings(path);
+    CHECK(defaults.rom_type == jondra::RomType::Basic);
+    CHECK(defaults.window_width == 1120);
+    CHECK(defaults.snapshot_save_path == "snapshot.osn");
 }
 
 void test_memory_mapping() {
@@ -445,6 +496,7 @@ void test_tape() {
 int main() {
     test_keyboard_matrix();
     test_audio();
+    test_app_settings();
     test_memory_mapping();
     test_rom_and_cpu();
     test_machine_ports_and_video();

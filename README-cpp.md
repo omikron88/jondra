@@ -85,6 +85,14 @@ bits 5-7 of port A0. The optional Melodik module emulates its SN76489 tone and
 noise generator at 2 MHz. Both sources are mixed into a 44.1 kHz mono SDL3
 audio stream. They can be enabled independently in **Tools > Settings**.
 
+## Settings
+
+The selected ROM, fullscreen and scanline options, both audio switches, the
+window size and the most recently used file-dialog paths are restored on the
+next start. They are written to `jondra.ini` below the platform-specific user
+directory returned by SDL. No configuration file is created beside the
+executable.
+
 Emulator controls:
 
 - `F5`: pause/resume

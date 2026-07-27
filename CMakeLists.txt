@@ -24,6 +24,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(z80)
 
 set(JONDRA_CORE_SOURCES
+    cpp/src/app_settings.cpp
     cpp/src/audio.cpp
     cpp/src/binary_file.cpp
     cpp/src/keyboard.cpp
