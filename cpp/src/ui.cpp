@@ -344,8 +344,11 @@ void draw_toolbar(SDL_Window* window, Machine& machine, bool& paused,
     ImGui::SameLine();
     unavailable_button("Open tape");
     ImGui::SameLine();
-    if(ImGui::Button("Snapshot"))
+    if(ImGui::Button("Open snapshot"))
         open_snapshot_dialog(window, true, paused, state);
+    ImGui::SameLine();
+    if(ImGui::Button("Save snapshot"))
+        open_snapshot_dialog(window, false, paused, state);
     ImGui::SameLine();
     if(ImGui::Button("Load binary"))
         open_binary_window(true, paused, state);
