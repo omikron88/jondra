@@ -342,7 +342,9 @@ void test_tape() {
     jondra::Tape binary_tape;
     binary_tape.open_playback(tap_path);
     CHECK(binary_tape.sample_rate() == 500'000);
-    CHECK(binary_tape.length() > 100'000);
+    // This exact length also guards the Java-compatible byte truncation and
+    // per-block alignment used by TapFile.tapbuffer.
+    CHECK(binary_tape.length() == 32'946'200);
 
     std::error_code error;
     std::filesystem::remove(wav_path, error);

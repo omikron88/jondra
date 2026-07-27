@@ -76,10 +76,15 @@ void append_logical_byte(std::vector<bool>& bits, std::uint8_t value) {
         bits.push_back((value & (1u << bit)) != 0);
 }
 
-void align_and_pause(std::vector<bool>& bits) {
-    while((bits.size() & 7u) != 0)
-        bits.push_back(false);
-    bits.insert(bits.end(), 16, false);
+void align_and_pause(std::vector<bool>& bits, std::size_t block_start) {
+    // TapFile.java sets the bit position to zero without advancing to the
+    // next byte, then advances the byte position by two. Reproduce that
+    // slightly unusual truncation exactly; rounding up first adds one
+    // spurious byte and makes the following pilot undetectable by the ROM.
+    const auto relative_size = bits.size() - block_start;
+    const auto target =
+        block_start + (relative_size / 8u + 2u) * 8u;
+    bits.resize(target, false);
 }
 
 void append_pilot(std::vector<bool>& bits) {
@@ -90,17 +95,21 @@ void append_pilot(std::vector<bool>& bits) {
 void append_tap_block(std::vector<bool>& bits,
                       const std::span<const std::uint8_t> header,
                       const std::span<const std::uint8_t> body) {
+    const auto block_start = bits.size();
     bits.insert(bits.end(), 100u * 8u, false);
     append_pilot(bits);
     for(const auto value : header)
         append_logical_byte(bits, value);
     append_logical_byte(bits, 0);
-    align_and_pause(bits);
+    align_and_pause(bits, block_start);
     append_pilot(bits);
     for(const auto value : body)
         append_logical_byte(bits, value);
     append_logical_byte(bits, 0);
-    align_and_pause(bits);
+    align_and_pause(bits, block_start);
+    // The Java reader treats bit zero at the final write position as part of
+    // the buffer before it marks the block consumed.
+    bits.push_back(false);
 }
 
 std::vector<bool> logical_to_tap_wave(const std::vector<bool>& bits) {
