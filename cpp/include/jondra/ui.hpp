@@ -24,6 +24,7 @@ struct UiState {
     bool scanlines = false;
     bool quit_requested = false;
     bool binary_dialog_was_running = false;
+    bool snapshot_dialog_was_running = false;
     bool native_file_dialog_open = false;
     bool binary_has_header = false;
     bool binary_run_after_load = false;
@@ -34,6 +35,8 @@ struct UiState {
     std::uint16_t binary_save_last = 0xffff;
     std::string binary_load_path;
     std::string binary_save_path;
+    std::string snapshot_load_path;
+    std::string snapshot_save_path = "snapshot.osn";
     std::string status = "Ready";
 };
 

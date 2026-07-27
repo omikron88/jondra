@@ -29,8 +29,12 @@ public:
 
     [[nodiscard]] std::uint8_t read(std::uint16_t address) const;
     [[nodiscard]] std::uint8_t read_ram(std::uint16_t address) const;
+    [[nodiscard]] std::span<const std::uint8_t> ram() const noexcept {
+        return ram_;
+    }
     void write(std::uint16_t address, std::uint8_t value);
     void write_ram(std::uint16_t address, std::uint8_t value);
+    void restore_ram(std::span<const std::uint8_t> data);
 
     void map_rom(bool enabled) noexcept { rom_mapped_ = enabled; }
     void map_io(bool enabled) noexcept { io_mapped_ = enabled; }

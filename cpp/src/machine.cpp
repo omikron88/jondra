@@ -25,6 +25,7 @@ void Machine::reset(bool dirty) {
 
 void Machine::load_rom(RomType type, const std::filesystem::path& directory) {
     memory_.load_rom(type, directory);
+    rom_type_ = type;
 }
 
 void Machine::run_frame() {
@@ -81,6 +82,28 @@ void Machine::on_output(z80::fast_u16 port, z80::fast_u8 value) {
 
 void Machine::on_tick(unsigned count) {
     ticks_ += count;
+}
+
+void Machine::restore_snapshot_peripherals(std::uint8_t port_a0,
+                                           std::uint8_t port_a1,
+                                           std::uint8_t port_a3,
+                                           std::uint8_t resolution) {
+    port_a0_ = port_a0;
+    port_a1_ = port_a1;
+    port_a3_ = port_a3;
+    resolution_ = resolution;
+    ticks_ = 0;
+
+    memory_.map_rom((port_a3_ & 0x02u) == 0);
+    memory_.map_io((port_a3_ & 0x04u) != 0);
+    dma_enabled_ = (port_a3_ & 0x01u) != 0;
+    dma_timing_on_ = dma_enabled_;
+    const auto correction =
+        static_cast<std::uint64_t>(255u - resolution_) * 128u;
+    frame_ticks_ =
+        dma_timing_on_ ? (57u * 128u + correction) : default_frame_ticks;
+    rebuild_display_map();
+    refresh_display();
 }
 
 void Machine::rebuild_display_map() {

@@ -39,6 +39,18 @@ public:
     [[nodiscard]] const Memory& memory() const noexcept { return memory_; }
     [[nodiscard]] std::uint64_t ticks() const noexcept { return ticks_; }
     [[nodiscard]] bool dma_enabled() const noexcept { return dma_enabled_; }
+    [[nodiscard]] RomType rom_type() const noexcept { return rom_type_; }
+    [[nodiscard]] std::uint8_t port_a0() const noexcept { return port_a0_; }
+    [[nodiscard]] std::uint8_t port_a1() const noexcept { return port_a1_; }
+    [[nodiscard]] std::uint8_t port_a3() const noexcept { return port_a3_; }
+    [[nodiscard]] std::uint8_t resolution() const noexcept {
+        return resolution_;
+    }
+
+    void restore_snapshot_peripherals(std::uint8_t port_a0,
+                                      std::uint8_t port_a1,
+                                      std::uint8_t port_a3,
+                                      std::uint8_t resolution);
 
     z80::fast_u8 on_read(z80::fast_u16 address);
     void on_write(z80::fast_u16 address, z80::fast_u8 value);
@@ -60,6 +72,7 @@ private:
 
     std::uint64_t ticks_ = 0;
     std::uint64_t frame_ticks_ = default_frame_ticks;
+    RomType rom_type_ = RomType::Basic;
     std::uint8_t port_a0_ = 0;
     std::uint8_t port_a1_ = 0;
     std::uint8_t port_a3_ = 0;

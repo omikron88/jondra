@@ -28,6 +28,7 @@ set(JONDRA_CORE_SOURCES
     cpp/src/keyboard.cpp
     cpp/src/machine.cpp
     cpp/src/memory.cpp
+    cpp/src/snapshot.cpp
 )
 
 if(JONDRA_EMBED_ROMS)

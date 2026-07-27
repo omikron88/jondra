@@ -2,6 +2,7 @@
 
 #include "jondra/binary_file.hpp"
 #include "jondra/machine.hpp"
+#include "jondra/snapshot.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -26,7 +27,9 @@ using jondra::UiState;
 
 enum class FileDialogKind {
     BinaryLoad,
-    BinarySave
+    BinarySave,
+    SnapshotLoad,
+    SnapshotSave
 };
 
 struct FileDialogContext {
@@ -71,7 +74,20 @@ std::filesystem::path path_from_utf8(std::string_view text) {
         std::u8string(begin, begin + text.size()));
 }
 
-void process_file_dialog_results(UiState& state) {
+bool is_load_dialog(FileDialogKind kind) {
+    return kind == FileDialogKind::BinaryLoad ||
+           kind == FileDialogKind::SnapshotLoad;
+}
+
+void finish_snapshot_dialog(bool& paused, UiState& state) {
+    if(state.snapshot_dialog_was_running)
+        paused = false;
+    state.snapshot_dialog_was_running = false;
+}
+
+void process_file_dialog_results(
+    Machine& machine, const std::filesystem::path& rom_directory,
+    bool& paused, UiState& state) {
     std::vector<FileDialogResult> results;
     {
         const std::scoped_lock lock(file_dialog_mutex);
@@ -82,11 +98,34 @@ void process_file_dialog_results(UiState& state) {
         if(!result.error.empty()) {
             state.status = "File dialog failed: " + result.error;
         } else if(result.path) {
-            if(result.kind == FileDialogKind::BinaryLoad)
+            if(result.kind == FileDialogKind::BinaryLoad) {
                 state.binary_load_path = std::move(*result.path);
-            else
+            } else if(result.kind == FileDialogKind::BinarySave) {
                 state.binary_save_path = std::move(*result.path);
+            } else {
+                try {
+                    auto path = path_from_utf8(*result.path);
+                    if(result.kind == FileDialogKind::SnapshotLoad) {
+                        state.snapshot_load_path = std::move(*result.path);
+                        state.rom_type = jondra::load_snapshot_file(
+                            path, machine, rom_directory);
+                        state.status = "Snapshot loaded";
+                    } else {
+                        if(path.extension().empty())
+                            path.replace_extension(".osn");
+                        state.snapshot_save_path = path.string();
+                        jondra::save_snapshot_file(path, machine);
+                        state.status = "Snapshot saved";
+                    }
+                } catch(const std::exception& error) {
+                    state.status =
+                        std::string("Snapshot failed: ") + error.what();
+                }
+            }
         }
+        if(result.kind == FileDialogKind::SnapshotLoad ||
+           result.kind == FileDialogKind::SnapshotSave)
+            finish_snapshot_dialog(paused, state);
     }
 }
 
@@ -95,29 +134,45 @@ void show_native_file_dialog(SDL_Window* window, UiState& state,
     if(state.native_file_dialog_open)
         return;
 
-    static constexpr SDL_DialogFileFilter filters[]{
+    static constexpr SDL_DialogFileFilter binary_filters[]{
         {"Binary files", "bin;rom"},
         {"All files", "*"},
     };
-    const auto& current_path =
-        kind == FileDialogKind::BinaryLoad ? state.binary_load_path
-                                           : state.binary_save_path;
+    static constexpr SDL_DialogFileFilter snapshot_filters[]{
+        {"JOndra snapshots", "osn"},
+        {"All files", "*"},
+    };
+    const bool snapshot = kind == FileDialogKind::SnapshotLoad ||
+                          kind == FileDialogKind::SnapshotSave;
+    const auto* filters = snapshot ? snapshot_filters : binary_filters;
+    const auto filter_count = snapshot
+        ? static_cast<int>(std::size(snapshot_filters))
+        : static_cast<int>(std::size(binary_filters));
+    const auto& current_path = [&]() -> const std::string& {
+        switch(kind) {
+        case FileDialogKind::BinaryLoad: return state.binary_load_path;
+        case FileDialogKind::BinarySave: return state.binary_save_path;
+        case FileDialogKind::SnapshotLoad: return state.snapshot_load_path;
+        case FileDialogKind::SnapshotSave: return state.snapshot_save_path;
+        }
+        return state.binary_load_path;
+    }();
     auto context = std::make_unique<FileDialogContext>();
     context->kind = kind;
     context->default_location = current_path;
     auto* callback_context = context.release();
     state.native_file_dialog_open = true;
 
-    if(kind == FileDialogKind::BinaryLoad) {
+    if(is_load_dialog(kind)) {
         SDL_ShowOpenFileDialog(file_dialog_callback, callback_context, window,
-                               filters, static_cast<int>(std::size(filters)),
+                               filters, filter_count,
                                callback_context->default_location.empty()
                                    ? nullptr
                                    : callback_context->default_location.c_str(),
                                false);
     } else {
         SDL_ShowSaveFileDialog(file_dialog_callback, callback_context, window,
-                               filters, static_cast<int>(std::size(filters)),
+                               filters, filter_count,
                                callback_context->default_location.empty()
                                    ? nullptr
                                    : callback_context->default_location.c_str());
@@ -173,16 +228,33 @@ void toggle_fullscreen(SDL_Window* window, UiState& state) {
     }
 }
 
-void draw_file_menu(bool& paused, UiState& state) {
+void open_snapshot_dialog(SDL_Window* window, bool load, bool& paused,
+                          UiState& state) {
+    if(state.native_file_dialog_open)
+        return;
+    state.snapshot_dialog_was_running = !paused;
+    paused = true;
+    state.status = load ? "Select a snapshot to load"
+                        : "Select where to save the snapshot";
+    show_native_file_dialog(
+        window, state,
+        load ? FileDialogKind::SnapshotLoad : FileDialogKind::SnapshotSave);
+}
+
+void draw_file_menu(SDL_Window* window, bool& paused, UiState& state) {
     if(!ImGui::BeginMenu("File"))
         return;
 
     ImGui::BeginDisabled();
     ImGui::MenuItem("Open tape...");
     ImGui::MenuItem("Save tape...");
+    ImGui::EndDisabled();
     ImGui::Separator();
-    ImGui::MenuItem("Open snapshot...");
-    ImGui::MenuItem("Save snapshot...");
+    if(ImGui::MenuItem("Open snapshot..."))
+        open_snapshot_dialog(window, true, paused, state);
+    if(ImGui::MenuItem("Save snapshot..."))
+        open_snapshot_dialog(window, false, paused, state);
+    ImGui::BeginDisabled();
     ImGui::MenuItem("Save screenshot...");
     ImGui::EndDisabled();
     ImGui::Separator();
@@ -234,7 +306,7 @@ void draw_menu_bar(SDL_Window* window, Machine& machine, bool& paused,
     if(!ImGui::BeginMainMenuBar())
         return;
 
-    draw_file_menu(paused, state);
+    draw_file_menu(window, paused, state);
     draw_control_menu(window, machine, paused, state);
     draw_tools_menu(state);
     if(ImGui::BeginMenu("Help")) {
@@ -252,7 +324,8 @@ void draw_menu_bar(SDL_Window* window, Machine& machine, bool& paused,
     ImGui::EndMainMenuBar();
 }
 
-void draw_toolbar(Machine& machine, bool& paused, UiState& state) {
+void draw_toolbar(SDL_Window* window, Machine& machine, bool& paused,
+                  UiState& state) {
     if(ImGui::Button("Reset"))
         reset_machine(machine, paused, state);
     ImGui::SameLine();
@@ -271,7 +344,8 @@ void draw_toolbar(Machine& machine, bool& paused, UiState& state) {
     ImGui::SameLine();
     unavailable_button("Open tape");
     ImGui::SameLine();
-    unavailable_button("Snapshot");
+    if(ImGui::Button("Snapshot"))
+        open_snapshot_dialog(window, true, paused, state);
     ImGui::SameLine();
     if(ImGui::Button("Load binary"))
         open_binary_window(true, paused, state);
@@ -451,8 +525,8 @@ void draw_status_bar(const Machine& machine, bool paused, const UiState& state) 
                 state.status.c_str());
 }
 
-void draw_main_window(SDL_Texture* texture, Machine& machine, bool& paused,
-                      UiState& state) {
+void draw_main_window(SDL_Window* window, SDL_Texture* texture,
+                      Machine& machine, bool& paused, UiState& state) {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float menu_height = ImGui::GetFrameHeight();
     ImGui::SetNextWindowPos({viewport->Pos.x, viewport->Pos.y + menu_height});
@@ -463,7 +537,7 @@ void draw_main_window(SDL_Texture* texture, Machine& machine, bool& paused,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
     ImGui::Begin("##JOndraMain", nullptr, flags);
-    draw_toolbar(machine, paused, state);
+    draw_toolbar(window, machine, paused, state);
     ImGui::Separator();
 
     const float status_height = ImGui::GetFrameHeightWithSpacing();
@@ -612,9 +686,9 @@ namespace jondra {
 void draw_ui(SDL_Window* window, SDL_Texture* screen_texture, Machine& machine,
              const std::filesystem::path& rom_directory, bool& paused,
              UiState& state) {
-    process_file_dialog_results(state);
+    process_file_dialog_results(machine, rom_directory, paused, state);
     draw_menu_bar(window, machine, paused, state);
-    draw_main_window(screen_texture, machine, paused, state);
+    draw_main_window(window, screen_texture, machine, paused, state);
     draw_binary_load(window, machine, paused, state);
     draw_binary_save(window, machine, paused, state);
     draw_settings(window, machine, rom_directory, paused, state);

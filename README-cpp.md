@@ -14,12 +14,13 @@ migrated.
 - SDL3 window, nearest-neighbour rendering and keyboard input;
 - Dear ImGui menu bar, toolbar, status bar, settings and debugger shell;
 - native file dialogs for loading and saving raw or header-based memory blocks;
+- Java-compatible OSN v1/v2 snapshot loading and OSN v2 snapshot saving;
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 
-Audio, tape formats, snapshots, rewind and the full graphical debugger still
-use the Java implementation and will be migrated in later milestones. Their UI
-entries are shown but disabled until the corresponding backend is available.
+Audio, tape formats, rewind and the full graphical debugger still use the Java
+implementation and will be migrated in later milestones. Their UI entries are
+shown but disabled until the corresponding backend is available.
 
 ## Build
 

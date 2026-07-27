@@ -3,6 +3,7 @@
 #include "jondra/keyboard.hpp"
 #include "jondra/machine.hpp"
 #include "jondra/memory.hpp"
+#include "jondra/snapshot.hpp"
 
 #include <algorithm>
 #include <array>
@@ -168,6 +169,98 @@ void test_binary_files() {
     std::filesystem::remove(path, error);
 }
 
+void test_snapshots() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "jondra-core-snapshot-test.osn";
+    jondra::Machine machine;
+    machine.load_rom(jondra::RomType::Vili, JONDRA_DEFAULT_ROM_DIR);
+    machine.set_i(0x12);
+    machine.set_alt_hl(0x2345);
+    machine.set_alt_de(0x3456);
+    machine.set_alt_bc(0x4567);
+    machine.set_alt_af(0x5678);
+    machine.set_hl(0x6789);
+    machine.set_de(0x789a);
+    machine.set_bc(0x89ab);
+    machine.set_iy(0x9abc);
+    machine.set_ix(0xabcd);
+    machine.set_iff1(true);
+    machine.set_iff2(false);
+    machine.set_is_int_disabled(true);
+    machine.set_is_halted(true);
+    machine.set_r(0xbc);
+    machine.set_af(0xcdef);
+    machine.set_sp(0xdef0);
+    machine.set_pc(0xef01);
+    machine.set_int_mode(2);
+    machine.set_wz(0xf012);
+    machine.write_memory(0x0000, 0xa5, true);
+    machine.write_memory(0xd800, 0x5a, true);
+    machine.restore_snapshot_peripherals(0x11, 0x22, 0x07, 0xfe);
+
+    jondra::save_snapshot_file(path, machine);
+    CHECK(std::filesystem::file_size(path) == 65'575);
+    {
+        std::ifstream stream(path, std::ios::binary);
+        CHECK(stream.get() == 'O');
+        CHECK(stream.get() == 'S');
+        CHECK(stream.get() == 'N');
+        CHECK(stream.get() == 2);
+    }
+
+    jondra::Machine restored;
+    const auto rom =
+        jondra::load_snapshot_file(path, restored, JONDRA_DEFAULT_ROM_DIR);
+    CHECK(rom == jondra::RomType::Vili);
+    CHECK(restored.rom_type() == jondra::RomType::Vili);
+    CHECK(restored.get_i() == 0x12);
+    CHECK(restored.get_alt_hl() == 0x2345);
+    CHECK(restored.get_alt_de() == 0x3456);
+    CHECK(restored.get_alt_bc() == 0x4567);
+    CHECK(restored.get_alt_af() == 0x5678);
+    CHECK(restored.get_hl() == 0x6789);
+    CHECK(restored.get_de() == 0x789a);
+    CHECK(restored.get_bc() == 0x89ab);
+    CHECK(restored.get_iy() == 0x9abc);
+    CHECK(restored.get_ix() == 0xabcd);
+    CHECK(restored.get_iff1());
+    CHECK(!restored.get_iff2());
+    CHECK(restored.is_int_disabled());
+    CHECK(restored.is_halted());
+    CHECK(restored.get_r() == 0xbc);
+    CHECK(restored.get_af() == 0xcdef);
+    CHECK(restored.get_sp() == 0xdef0);
+    CHECK(restored.get_pc() == 0xef01);
+    CHECK(restored.get_int_mode() == 2);
+    CHECK(restored.get_wz() == 0xf012);
+    CHECK(restored.port_a0() == 0x11);
+    CHECK(restored.port_a1() == 0x22);
+    CHECK(restored.port_a3() == 0x07);
+    CHECK(restored.resolution() == 0xfe);
+    CHECK(!restored.memory().rom_mapped());
+    CHECK(restored.memory().io_mapped());
+    CHECK(restored.dma_enabled());
+    CHECK(restored.memory().read_ram(0x0000) == 0xa5);
+    CHECK(restored.memory().read_ram(0xd800) == 0x5a);
+
+    {
+        std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+        stream.write("OSN", 3);
+    }
+    restored.set_pc(0x1357);
+    bool rejected = false;
+    try {
+        jondra::load_snapshot_file(path, restored, JONDRA_DEFAULT_ROM_DIR);
+    } catch(const std::exception&) {
+        rejected = true;
+    }
+    CHECK(rejected);
+    CHECK(restored.get_pc() == 0x1357);
+
+    std::error_code error;
+    std::filesystem::remove(path, error);
+}
+
 } // namespace
 
 int main() {
@@ -177,5 +270,6 @@ int main() {
     test_machine_ports_and_video();
     test_embedded_roms();
     test_binary_files();
+    test_snapshots();
     std::cout << "All jondra core tests passed\n";
 }

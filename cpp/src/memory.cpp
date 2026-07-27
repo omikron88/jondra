@@ -111,4 +111,10 @@ void Memory::write_ram(std::uint16_t address, std::uint8_t value) {
     ram_[address] = value;
 }
 
+void Memory::restore_ram(std::span<const std::uint8_t> data) {
+    if(data.size() != ram_.size())
+        throw std::runtime_error("Snapshot RAM must contain exactly 64 KiB");
+    std::copy(data.begin(), data.end(), ram_.begin());
+}
+
 } // namespace jondra
