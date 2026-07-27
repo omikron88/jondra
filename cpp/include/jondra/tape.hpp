@@ -15,6 +15,12 @@ enum class TapeMode {
     Recording
 };
 
+enum class TapeTransport {
+    Stopped,
+    Playing,
+    Paused
+};
+
 class Tape {
 public:
     static constexpr std::uint64_t cpu_rate = 2'000'000;
@@ -34,10 +40,16 @@ public:
     void open_recording(const std::filesystem::path& path);
     void close();
     void rewind();
+    void play();
+    void pause();
+    void stop();
     void set_motor(bool running);
     void advance(unsigned ticks, bool output_high);
 
     [[nodiscard]] TapeMode mode() const noexcept { return mode_; }
+    [[nodiscard]] TapeTransport transport() const noexcept {
+        return transport_;
+    }
     [[nodiscard]] bool motor_running() const noexcept { return motor_running_; }
     [[nodiscard]] bool input_high() const noexcept { return input_high_; }
     [[nodiscard]] bool finished() const noexcept { return finished_; }
@@ -61,14 +73,17 @@ private:
     void load_csw(const std::filesystem::path& path);
     void load_tap(const std::filesystem::path& path);
     void flush_recording();
+    void update_motor();
 
     TapeMode mode_ = TapeMode::Empty;
+    TapeTransport transport_ = TapeTransport::Stopped;
     std::filesystem::path recording_path_;
     std::vector<bool> playback_samples_;
     std::vector<bool> recording_samples_;
     std::uint32_t sample_rate_ = 0;
     std::uint64_t phase_ = 0;
     std::size_t position_ = 0;
+    bool motor_requested_ = false;
     bool motor_running_ = false;
     bool input_high_ = true;
     bool finished_ = false;

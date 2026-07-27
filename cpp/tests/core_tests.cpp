@@ -305,9 +305,27 @@ void test_tape() {
     tape.advance(2'000, false);
     CHECK(tape.position() == 1);
     CHECK(tape.input_high());
+    tape.pause();
+    CHECK(tape.transport() == jondra::TapeTransport::Paused);
+    CHECK(!tape.motor_running());
+    tape.advance(2'000, false);
+    CHECK(tape.position() == 1);
+    tape.set_motor(true);
+    CHECK(!tape.motor_running());
+    tape.play();
+    CHECK(tape.transport() == jondra::TapeTransport::Playing);
+    CHECK(tape.motor_running());
+    tape.stop();
+    CHECK(tape.transport() == jondra::TapeTransport::Stopped);
+    CHECK(!tape.motor_running());
+    tape.play();
+    CHECK(tape.motor_running());
     tape.advance(6'000, false);
     CHECK(tape.finished());
     CHECK(!tape.motor_running());
+    tape.rewind();
+    CHECK(!tape.finished());
+    CHECK(tape.motor_running());
 
     jondra::Machine machine;
     machine.tape().open_playback(wav_path);

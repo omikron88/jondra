@@ -142,6 +142,8 @@ void Tape::open_playback(const std::filesystem::path& path) {
     filename_.clear();
     sample_rate_ = 0;
     error_.clear();
+    transport_ = TapeTransport::Stopped;
+    motor_requested_ = false;
     motor_running_ = false;
     input_high_ = true;
     phase_ = 0;
@@ -165,6 +167,7 @@ void Tape::open_playback(const std::filesystem::path& path) {
     if(playback_samples_.empty())
         throw std::runtime_error("Tape contains no samples");
     mode_ = TapeMode::Playback;
+    transport_ = TapeTransport::Playing;
     filename_ = path.filename().string();
     input_high_ = playback_samples_.front();
 }
@@ -180,6 +183,8 @@ void Tape::open_recording(const std::filesystem::path& path) {
     mode_ = TapeMode::Recording;
     filename_ = recording_path_.filename().string();
     sample_rate_ = recording_rate;
+    transport_ = TapeTransport::Playing;
+    motor_requested_ = false;
     motor_running_ = false;
     input_high_ = true;
     phase_ = 0;
@@ -197,8 +202,10 @@ void Tape::close() {
     recording_samples_.clear();
     filename_.clear();
     sample_rate_ = 0;
+    transport_ = TapeTransport::Stopped;
     phase_ = 0;
     position_ = 0;
+    motor_requested_ = false;
     motor_running_ = false;
     input_high_ = true;
     finished_ = false;
@@ -210,13 +217,41 @@ void Tape::rewind() {
     finished_ = false;
     if(mode_ == TapeMode::Playback && !playback_samples_.empty())
         input_high_ = playback_samples_.front();
+    update_motor();
+}
+
+void Tape::play() {
+    if(mode_ == TapeMode::Empty)
+        return;
+    transport_ = TapeTransport::Playing;
+    update_motor();
+}
+
+void Tape::pause() {
+    if(mode_ == TapeMode::Empty)
+        return;
+    transport_ = TapeTransport::Paused;
+    update_motor();
+}
+
+void Tape::stop() {
+    if(mode_ == TapeMode::Empty)
+        return;
+    transport_ = TapeTransport::Stopped;
+    update_motor();
 }
 
 void Tape::set_motor(bool running) {
-    if(motor_running_ == running)
-        return;
-    motor_running_ = running && mode_ != TapeMode::Empty && !finished_;
-    if(!motor_running_ && mode_ == TapeMode::Recording) {
+    motor_requested_ = running;
+    update_motor();
+}
+
+void Tape::update_motor() {
+    const bool was_running = motor_running_;
+    motor_running_ =
+        motor_requested_ && transport_ == TapeTransport::Playing &&
+        mode_ != TapeMode::Empty && !finished_;
+    if(was_running && !motor_running_ && mode_ == TapeMode::Recording) {
         try {
             flush_recording();
         } catch(const std::exception& exception) {

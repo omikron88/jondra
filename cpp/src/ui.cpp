@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -294,6 +295,29 @@ void open_tape_dialog(SDL_Window* window, bool load, bool& paused,
         load ? FileDialogKind::TapeLoad : FileDialogKind::TapeSave);
 }
 
+void toggle_tape_playback(Machine& machine, UiState& state) {
+    auto& tape = machine.tape();
+    if(tape.transport() == jondra::TapeTransport::Playing) {
+        tape.pause();
+        state.status = "Tape paused";
+    } else {
+        tape.play();
+        state.status = tape.mode() == jondra::TapeMode::Recording
+                     ? "Tape recording enabled"
+                     : "Tape playback enabled";
+    }
+}
+
+void stop_tape(Machine& machine, UiState& state) {
+    machine.tape().stop();
+    state.status = "Tape stopped";
+}
+
+void rewind_tape(Machine& machine, UiState& state) {
+    machine.tape().rewind();
+    state.status = "Tape rewound";
+}
+
 void draw_file_menu(SDL_Window* window, Machine& machine, bool& paused,
                     UiState& state) {
     if(!ImGui::BeginMenu("File"))
@@ -304,10 +328,18 @@ void draw_file_menu(SDL_Window* window, Machine& machine, bool& paused,
     if(ImGui::MenuItem("Open tape for recording..."))
         open_tape_dialog(window, false, paused, state);
     ImGui::BeginDisabled(machine.tape().mode() == jondra::TapeMode::Empty);
+    const bool tape_playing =
+        machine.tape().transport() == jondra::TapeTransport::Playing;
+    if(ImGui::MenuItem(tape_playing ? "Pause tape" : "Play tape"))
+        toggle_tape_playback(machine, state);
+    if(ImGui::MenuItem("Stop tape"))
+        stop_tape(machine, state);
+    ImGui::BeginDisabled(
+        machine.tape().mode() != jondra::TapeMode::Playback);
     if(ImGui::MenuItem("Rewind tape")) {
-        machine.tape().rewind();
-        state.status = "Tape rewound";
+        rewind_tape(machine, state);
     }
+    ImGui::EndDisabled();
     if(ImGui::MenuItem("Eject tape")) {
         machine.tape().close();
         state.status = "Tape ejected";
@@ -429,6 +461,65 @@ void draw_toolbar(SDL_Window* window, Machine& machine, bool& paused,
     ImGui::SameLine();
     if(ImGui::Button("Settings"))
         state.show_settings = true;
+}
+
+std::string tape_time(std::size_t samples, std::uint32_t sample_rate) {
+    if(sample_rate == 0)
+        return "--:--";
+    const auto seconds = samples / sample_rate;
+    const auto minutes = seconds / 60u;
+    char text[32]{};
+    std::snprintf(text, sizeof(text), "%02llu:%02llu",
+                  static_cast<unsigned long long>(minutes),
+                  static_cast<unsigned long long>(seconds % 60u));
+    return text;
+}
+
+void draw_tape_transport(Machine& machine, UiState& state) {
+    auto& tape = machine.tape();
+    const bool empty = tape.mode() == jondra::TapeMode::Empty;
+    const bool playing =
+        tape.transport() == jondra::TapeTransport::Playing;
+
+    ImGui::TextUnformatted("Tape");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(empty);
+    if(ImGui::Button(playing ? "Pause##Tape" : "Play##Tape"))
+        toggle_tape_playback(machine, state);
+    ImGui::SameLine();
+    if(ImGui::Button("Stop##Tape"))
+        stop_tape(machine, state);
+    ImGui::SameLine();
+    ImGui::BeginDisabled(tape.mode() != jondra::TapeMode::Playback);
+    if(ImGui::Button("Rewind##Tape"))
+        rewind_tape(machine, state);
+    ImGui::EndDisabled();
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    if(tape.mode() == jondra::TapeMode::Playback) {
+        const float progress = tape.length() == 0
+            ? 0.0f
+            : static_cast<float>(
+                  static_cast<double>(tape.position()) /
+                  static_cast<double>(tape.length()));
+        const auto overlay =
+            tape_time(tape.position(), tape.sample_rate()) + " / " +
+            tape_time(tape.length(), tape.sample_rate());
+        ImGui::ProgressBar(progress, {220.0f, 0.0f}, overlay.c_str());
+    } else if(tape.mode() == jondra::TapeMode::Recording) {
+        ImGui::Text("REC %s",
+                    tape_time(tape.position(), tape.sample_rate()).c_str());
+    } else {
+        ImGui::TextDisabled("(no tape)");
+    }
+
+    if(!empty) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("%.*s",
+                            static_cast<int>(tape.filename().size()),
+                            tape.filename().data());
+    }
 }
 
 bool hex_address_input(const char* label, std::uint16_t& value) {
@@ -592,9 +683,16 @@ void draw_status_bar(const Machine& machine, bool paused, const UiState& state) 
     const char* tape_state = "empty";
     if(tape.mode() == jondra::TapeMode::Playback)
         tape_state = tape.finished() ? "end" :
+                     tape.transport() == jondra::TapeTransport::Paused
+                         ? "paused" :
+                     tape.transport() == jondra::TapeTransport::Stopped
+                         ? "stopped" :
                      tape.motor_running() ? "play" : "ready";
     else if(tape.mode() == jondra::TapeMode::Recording)
-        tape_state = tape.motor_running() ? "record" : "record ready";
+        tape_state =
+            tape.transport() == jondra::TapeTransport::Paused ? "paused" :
+            tape.transport() == jondra::TapeTransport::Stopped ? "stopped" :
+            tape.motor_running() ? "record" : "record ready";
     const auto status =
         tape.error().empty() ? std::string_view(state.status) : tape.error();
     ImGui::Text("| ROM: %.*s | DMA: %s | TAPE: %s | T-states: %llu | %s",
@@ -619,6 +717,7 @@ void draw_main_window(SDL_Window* window, SDL_Texture* texture,
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
     ImGui::Begin("##JOndraMain", nullptr, flags);
     draw_toolbar(window, machine, paused, state);
+    draw_tape_transport(machine, state);
     ImGui::Separator();
 
     const float status_height = ImGui::GetFrameHeightWithSpacing();
