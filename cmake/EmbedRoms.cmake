@@ -23,7 +23,11 @@ function(jondra_generate_embedded_roms output_file)
         string(REPLACE "|" ";" fields "${entry}")
         list(GET fields 0 symbol)
         list(GET fields 1 filename)
-        file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/roms/${filename}" rom_hex HEX)
+        set(rom_path "${CMAKE_CURRENT_SOURCE_DIR}/src/roms/${filename}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+            "${rom_path}"
+        )
+        file(READ "${rom_path}" rom_hex HEX)
         string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," rom_bytes "${rom_hex}")
         file(APPEND "${output_file}"
             "constexpr std::uint8_t ${symbol}[] = {${rom_bytes}};\n"

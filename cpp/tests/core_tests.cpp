@@ -1,13 +1,16 @@
 #include "jondra/binary_file.hpp"
+#include "jondra/embedded_roms.hpp"
 #include "jondra/keyboard.hpp"
 #include "jondra/machine.hpp"
 #include "jondra/memory.hpp"
 
-#include <cstdlib>
+#include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 namespace {
 
@@ -88,6 +91,16 @@ void test_embedded_roms() {
     jondra::Memory memory(keyboard);
     memory.load_rom(jondra::RomType::Basic, "directory-that-does-not-exist");
     CHECK(memory.read(0) != memory.read_ram(0));
+
+    const auto rom_path =
+        std::filesystem::path(JONDRA_DEFAULT_ROM_DIR) / "Ondra_PLUS_a.rom";
+    std::ifstream stream(rom_path, std::ios::binary);
+    const std::vector<std::uint8_t> file(
+        std::istreambuf_iterator<char>(stream),
+        std::istreambuf_iterator<char>());
+    const auto embedded = jondra::embedded_rom("Ondra_PLUS_a.rom");
+    CHECK(file.size() == embedded.size());
+    CHECK(std::equal(file.begin(), file.end(), embedded.begin()));
 #endif
 }
 
