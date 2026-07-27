@@ -19,6 +19,10 @@ class Tape {
 public:
     static constexpr std::uint64_t cpu_rate = 2'000'000;
     static constexpr std::uint32_t recording_rate = 22'050;
+    // TapFile.java requests one generated sample every four T-states, but its
+    // timeout scheduler discards instruction-cycle overshoot. On the running
+    // emulator this produces 220/440 us pulses, matching reference WAV tapes.
+    static constexpr std::uint32_t tap_sample_rate = 318'182;
 
     Tape() = default;
     ~Tape();

@@ -380,7 +380,7 @@ void Tape::load_tap(const std::filesystem::path& path) {
         append_tap_block(logical_bits, header, body);
     }
     playback_samples_ = logical_to_tap_wave(logical_bits);
-    sample_rate_ = 500'000;
+    sample_rate_ = tap_sample_rate;
 }
 
 void Tape::flush_recording() {

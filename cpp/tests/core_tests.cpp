@@ -341,7 +341,13 @@ void test_tape() {
         "Ondra_mezi_balvany_ViLi.tap";
     jondra::Tape binary_tape;
     binary_tape.open_playback(tap_path);
-    CHECK(binary_tape.sample_rate() == 500'000);
+    CHECK(binary_tape.sample_rate() == jondra::Tape::tap_sample_rate);
+    const auto short_pulse_ns =
+        70'000'000'000ull / binary_tape.sample_rate();
+    const auto long_pulse_ns =
+        140'000'000'000ull / binary_tape.sample_rate();
+    CHECK(short_pulse_ns >= 219'000 && short_pulse_ns <= 221'000);
+    CHECK(long_pulse_ns >= 439'000 && long_pulse_ns <= 441'000);
     // This exact length also guards the Java-compatible byte truncation and
     // per-block alignment used by TapFile.tapbuffer.
     CHECK(binary_tape.length() == 32'946'200);
