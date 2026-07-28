@@ -182,8 +182,12 @@ void test_machine_ports_and_video() {
     jondra::Machine machine;
     CHECK(machine.memory().rom_mapped());
     CHECK(!machine.memory().io_mapped());
+    CHECK(machine.green_led_on());
+    CHECK(machine.yellow_led_on());
 
     machine.on_output(0x0000, 0x06);
+    CHECK(machine.green_led_on());
+    CHECK(!machine.yellow_led_on());
     CHECK(!machine.memory().rom_mapped());
     CHECK(machine.memory().io_mapped());
     CHECK(!machine.dma_enabled());
@@ -193,6 +197,8 @@ void test_machine_ports_and_video() {
     machine.set_melodik_enabled(true);
 
     machine.on_output(0x0000, 0x01);
+    CHECK(!machine.green_led_on());
+    CHECK(machine.yellow_led_on());
     CHECK(machine.memory().rom_mapped());
     CHECK(!machine.memory().io_mapped());
     CHECK(machine.dma_enabled());

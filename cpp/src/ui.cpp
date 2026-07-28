@@ -670,6 +670,35 @@ void draw_screen(SDL_Texture* texture, const UiState& state) {
     }
 }
 
+void draw_panel_led(const char* label, bool on, ImU32 color,
+                    const char* port_bit) {
+    const float height = ImGui::GetFrameHeight();
+    const ImVec2 top_left = ImGui::GetCursorScreenPos();
+    const ImVec2 center{top_left.x + 7.0f, top_left.y + height * 0.5f};
+    auto* draw_list = ImGui::GetWindowDrawList();
+
+    if(on) {
+        const ImU32 glow =
+            (color & ~IM_COL32_A_MASK) | IM_COL32(0, 0, 0, 55);
+        draw_list->AddCircleFilled(center, 7.0f, glow);
+    }
+    draw_list->AddCircleFilled(center, 6.0f, IM_COL32(12, 15, 13, 255));
+    draw_list->AddCircleFilled(
+        center, 4.5f, on ? color : IM_COL32(43, 48, 44, 255));
+    if(on) {
+        draw_list->AddCircleFilled(
+            {center.x - 1.5f, center.y - 1.5f}, 1.3f,
+            IM_COL32(255, 255, 255, 170));
+    }
+
+    ImGui::Dummy({14.0f, height});
+    if(ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s: %s (%s, active low)",
+                          label, on ? "on" : "off", port_bit);
+    ImGui::SameLine(0.0f, 3.0f);
+    ImGui::TextUnformatted(label);
+}
+
 void draw_status_bar(const Machine& machine, bool paused, const UiState& state) {
     const ImVec2 cursor = ImGui::GetCursorScreenPos();
     const ImVec2 led{cursor.x + 7.0f, cursor.y + 9.0f};
@@ -679,6 +708,14 @@ void draw_status_bar(const Machine& machine, bool paused, const UiState& state) 
     ImGui::Dummy({16.0f, 1.0f});
     ImGui::SameLine();
     ImGui::TextUnformatted(paused ? "PAUSED" : "RUNNING");
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+    ImGui::SameLine();
+    draw_panel_led("LED1", machine.green_led_on(),
+                   IM_COL32(35, 225, 85, 255), "A0 bit 0");
+    ImGui::SameLine();
+    draw_panel_led("LED2", machine.yellow_led_on(),
+                   IM_COL32(245, 205, 35, 255), "A0 bit 1");
     ImGui::SameLine();
     const auto& tape = machine.tape();
     const char* tape_state = "empty";

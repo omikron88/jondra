@@ -66,6 +66,12 @@ public:
     [[nodiscard]] bool dma_enabled() const noexcept { return dma_enabled_; }
     [[nodiscard]] RomType rom_type() const noexcept { return rom_type_; }
     [[nodiscard]] std::uint8_t port_a0() const noexcept { return port_a0_; }
+    [[nodiscard]] bool green_led_on() const noexcept {
+        return (port_a0_ & 0x01u) == 0;
+    }
+    [[nodiscard]] bool yellow_led_on() const noexcept {
+        return (port_a0_ & 0x02u) == 0;
+    }
     [[nodiscard]] std::uint8_t port_a1() const noexcept { return port_a1_; }
     [[nodiscard]] std::uint8_t port_a3() const noexcept { return port_a3_; }
     [[nodiscard]] std::uint8_t resolution() const noexcept {

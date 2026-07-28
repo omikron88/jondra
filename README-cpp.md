@@ -19,6 +19,7 @@ migrated.
   recording;
 - SDL3 audio output, the seven built-in Ondra tones and the optional
   SN76489-based Melodik module;
+- active-low green and yellow front-panel LED indicators from port A0;
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 
