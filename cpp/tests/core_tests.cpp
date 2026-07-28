@@ -1,4 +1,5 @@
 #include "jondra/audio.hpp"
+#include "jondra/debugger.hpp"
 #include "jondra/app_settings.hpp"
 #include "jondra/binary_file.hpp"
 #include "jondra/embedded_roms.hpp"
@@ -201,6 +202,69 @@ void test_machine_ports_and_video() {
     for(const auto value : machine.framebuffer())
         lit_pixel_byte |= value != 0;
     CHECK(lit_pixel_byte);
+}
+
+void test_debugger() {
+    jondra::Machine machine;
+    machine.memory().map_rom(false);
+    machine.write_memory(0x0000, 0x00);
+    machine.write_memory(0x0001, 0x3c);
+    machine.write_memory(0x0002, 0xc3);
+    machine.write_memory(0x0003, 0x01);
+    machine.write_memory(0x0004, 0x00);
+    machine.set_pc(0);
+    machine.set_af(0);
+    machine.add_breakpoint(0x0001);
+
+    CHECK(!machine.run_frame());
+    CHECK(machine.breakpoint_hit());
+    CHECK(machine.breakpoint_address() == 0x0001);
+    CHECK(machine.get_pc() == 0x0001);
+    CHECK(machine.get_a() == 0);
+
+    CHECK(!machine.run_frame());
+    CHECK(machine.get_pc() == 0x0001);
+    CHECK(machine.get_a() == 1);
+
+    machine.step_instruction();
+    CHECK(machine.get_pc() == 0x0002);
+    CHECK(machine.get_a() == 2);
+
+    const auto jump = jondra::decode_instruction(machine, 0x0002);
+    CHECK(jump.length == 3);
+    CHECK(jump.text == "jp 0x0001");
+    CHECK(!jump.step_over_candidate);
+
+    machine.clear_breakpoints();
+    machine.write_memory(0x3000, 0xdd);
+    machine.write_memory(0x3001, 0x21);
+    machine.write_memory(0x3002, 0x34);
+    machine.write_memory(0x3003, 0x12);
+    const auto indexed = jondra::decode_instruction(machine, 0x3000);
+    CHECK(indexed.length == 4);
+    CHECK(indexed.text == "ld ix, 0x1234");
+
+    machine.write_memory(0x1000, 0xcd);
+    machine.write_memory(0x1001, 0x00);
+    machine.write_memory(0x1002, 0x20);
+    machine.write_memory(0x1003, 0x00);
+    machine.write_memory(0x2000, 0xc9);
+    machine.set_pc(0x1000);
+    machine.set_sp(0xd000);
+
+    const auto call = jondra::decode_instruction(machine, 0x1000);
+    CHECK(call.length == 3);
+    CHECK(call.text == "call 0x2000");
+    CHECK(call.step_over_candidate);
+    CHECK(machine.step_over());
+    CHECK(!machine.run_frame());
+    CHECK(machine.breakpoint_address() == 0x1003);
+    CHECK(machine.get_pc() == 0x1003);
+    CHECK(!machine.has_breakpoint(0x1003));
+
+    machine.add_breakpoint(0x3456);
+    machine.reset();
+    CHECK(machine.has_breakpoint(0x3456));
 }
 
 void test_embedded_roms() {
@@ -500,6 +564,7 @@ int main() {
     test_memory_mapping();
     test_rom_and_cpu();
     test_machine_ports_and_video();
+    test_debugger();
     test_embedded_roms();
     test_binary_files();
     test_snapshots();

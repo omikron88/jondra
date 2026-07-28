@@ -1,5 +1,7 @@
 #include "jondra/machine.hpp"
 
+#include "jondra/debugger.hpp"
+
 #include <algorithm>
 
 namespace jondra {
@@ -11,6 +13,8 @@ Machine::Machine()
 
 void Machine::reset(bool dirty) {
     Base::on_reset();
+    temporary_breakpoint_.reset();
+    breakpoint_hit_ = false;
     keyboard_.reset();
     keyboard_.set_melodik_present(audio_.melodik_enabled());
     audio_.reset();
@@ -33,13 +37,76 @@ void Machine::load_rom(RomType type, const std::filesystem::path& directory) {
     rom_type_ = type;
 }
 
-void Machine::run_frame() {
+bool Machine::run_frame() {
     const auto target = ticks_ + frame_ticks_;
     audio_.begin_frame(ticks_);
     on_handle_active_int();
-    while(ticks_ < target)
-        on_step();
+    const bool resume_past_breakpoint =
+        breakpoint_hit_ &&
+        static_cast<std::uint16_t>(get_pc()) == breakpoint_address_ &&
+        has_breakpoint(breakpoint_address_);
+    if(breakpoint_hit_)
+        breakpoint_hit_ = false;
+    if(resume_past_breakpoint)
+        on_step_over_breakpoint();
+    while(ticks_ < target) {
+        const auto events = on_step();
+        if((events & Events::breakpoint_hit) != 0) {
+            breakpoint_address_ = static_cast<std::uint16_t>(get_pc());
+            breakpoint_hit_ = true;
+            if(temporary_breakpoint_ &&
+               *temporary_breakpoint_ == breakpoint_address_) {
+                temporary_breakpoint_.reset();
+            }
+            audio_.end_frame();
+            return false;
+        }
+    }
     audio_.end_frame();
+    return true;
+}
+
+void Machine::step_instruction() {
+    temporary_breakpoint_.reset();
+    breakpoint_hit_ = false;
+    on_step_over_breakpoint();
+}
+
+bool Machine::step_over() {
+    const auto instruction =
+        decode_instruction(*this, static_cast<std::uint16_t>(get_pc()));
+    if(!instruction.step_over_candidate) {
+        step_instruction();
+        return false;
+    }
+
+    const auto return_address = static_cast<std::uint16_t>(
+        instruction.address + instruction.length);
+    temporary_breakpoint_ = return_address;
+    breakpoint_hit_ = false;
+    return true;
+}
+
+void Machine::add_breakpoint(std::uint16_t address) {
+    breakpoints_.insert(address);
+}
+
+void Machine::remove_breakpoint(std::uint16_t address) {
+    breakpoints_.erase(address);
+}
+
+void Machine::clear_breakpoints() {
+    breakpoints_.clear();
+}
+
+bool Machine::has_breakpoint(std::uint16_t address) const {
+    return breakpoints_.contains(address);
+}
+
+bool Machine::on_is_breakpoint_addr(z80::fast_u16 address) const {
+    const auto narrowed = static_cast<std::uint16_t>(address);
+    return has_breakpoint(narrowed) ||
+           (temporary_breakpoint_ && *temporary_breakpoint_ == narrowed);
 }
 
 void Machine::nmi() {

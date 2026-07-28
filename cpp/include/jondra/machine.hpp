@@ -8,6 +8,8 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
+#include <set>
 #include <span>
 
 #include "z80.h"
@@ -27,7 +29,22 @@ public:
 
     void reset(bool dirty = true);
     void load_rom(RomType type, const std::filesystem::path& directory);
-    void run_frame();
+    bool run_frame();
+    void step_instruction();
+    [[nodiscard]] bool step_over();
+    void add_breakpoint(std::uint16_t address);
+    void remove_breakpoint(std::uint16_t address);
+    void clear_breakpoints();
+    [[nodiscard]] bool has_breakpoint(std::uint16_t address) const;
+    [[nodiscard]] const std::set<std::uint16_t>& breakpoints() const noexcept {
+        return breakpoints_;
+    }
+    [[nodiscard]] bool breakpoint_hit() const noexcept {
+        return breakpoint_hit_;
+    }
+    [[nodiscard]] std::uint16_t breakpoint_address() const noexcept {
+        return breakpoint_address_;
+    }
 
     void key(Key key, bool pressed) { keyboard_.set(key, pressed); }
     void nmi();
@@ -72,6 +89,8 @@ public:
     z80::fast_u8 on_input(z80::fast_u16 port);
     void on_output(z80::fast_u16 port, z80::fast_u8 value);
     void on_tick(unsigned count);
+    [[nodiscard]] bool on_is_breakpoint_addr(
+        z80::fast_u16 address) const;
 
 private:
     void rebuild_display_map();
@@ -96,6 +115,10 @@ private:
     std::uint8_t resolution_ = 255;
     bool dma_enabled_ = true;
     bool dma_timing_on_ = false;
+    std::set<std::uint16_t> breakpoints_;
+    std::optional<std::uint16_t> temporary_breakpoint_;
+    std::uint16_t breakpoint_address_ = 0;
+    bool breakpoint_hit_ = false;
 };
 
 } // namespace jondra

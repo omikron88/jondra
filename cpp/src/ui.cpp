@@ -1,6 +1,7 @@
 #include "jondra/ui.hpp"
 
 #include "jondra/binary_file.hpp"
+#include "jondra/debugger.hpp"
 #include "jondra/machine.hpp"
 #include "jondra/snapshot.hpp"
 
@@ -781,11 +782,23 @@ void draw_settings(SDL_Window* window, Machine& machine,
     ImGui::End();
 }
 
+template<typename Getter, typename Setter>
+void draw_register(Machine& machine, const char* label,
+                   Getter getter, Setter setter) {
+    auto value = static_cast<std::uint16_t>((machine.*getter)());
+    ImGui::SetNextItemWidth(82.0f);
+    if(ImGui::InputScalar(label, ImGuiDataType_U16, &value, nullptr, nullptr,
+                          "%04X",
+                          ImGuiInputTextFlags_CharsHexadecimal |
+                          ImGuiInputTextFlags_EnterReturnsTrue))
+        (machine.*setter)(value);
+}
+
 void draw_debugger(Machine& machine, bool& paused, UiState& state) {
     if(!state.show_debugger)
         return;
 
-    ImGui::SetNextWindowSize({600.0f, 460.0f}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({760.0f, 620.0f}, ImGuiCond_FirstUseEver);
     if(ImGui::Begin("Debugger", &state.show_debugger)) {
         if(ImGui::Button(paused ? "Run" : "Pause")) {
             paused = !paused;
@@ -796,51 +809,163 @@ void draw_debugger(Machine& machine, bool& paused, UiState& state) {
         if(ImGui::Button("Reset"))
             reset_machine(machine, paused, state);
         ImGui::SameLine();
-        ImGui::BeginDisabled();
-        ImGui::Button("Step");
+        ImGui::BeginDisabled(!paused);
+        if(ImGui::Button("Step into (F7)")) {
+            machine.step_instruction();
+            state.debugger_follow_pc = true;
+            state.status = "Executed one instruction";
+        }
         ImGui::SameLine();
-        ImGui::Button("Step into");
+        if(ImGui::Button("Step over (F8)")) {
+            if(machine.step_over()) {
+                paused = false;
+                state.status = "Running to return address";
+            } else {
+                state.status = "Executed one instruction";
+            }
+            state.debugger_follow_pc = true;
+        }
         ImGui::EndDisabled();
 
         ImGui::SeparatorText("CPU");
-        ImGui::Text("PC: %04X", static_cast<unsigned>(machine.get_pc()));
-        ImGui::Text("T-states: %llu",
-                    static_cast<unsigned long long>(machine.ticks()));
-        ImGui::Text("ROM mapped: %s",
-                    machine.memory().rom_mapped() ? "yes" : "no");
-        ImGui::Text("I/O mapped: %s",
-                    machine.memory().io_mapped() ? "yes" : "no");
+        if(ImGui::BeginTable("##Registers", 4,
+                             ImGuiTableFlags_SizingStretchSame)) {
+            ImGui::TableNextColumn();
+            draw_register(machine, "AF", &Machine::get_af, &Machine::set_af);
+            draw_register(machine, "BC", &Machine::get_bc, &Machine::set_bc);
+            draw_register(machine, "DE", &Machine::get_de, &Machine::set_de);
+            draw_register(machine, "HL", &Machine::get_hl, &Machine::set_hl);
+            ImGui::TableNextColumn();
+            draw_register(machine, "AF'", &Machine::get_alt_af,
+                          &Machine::set_alt_af);
+            draw_register(machine, "BC'", &Machine::get_alt_bc,
+                          &Machine::set_alt_bc);
+            draw_register(machine, "DE'", &Machine::get_alt_de,
+                          &Machine::set_alt_de);
+            draw_register(machine, "HL'", &Machine::get_alt_hl,
+                          &Machine::set_alt_hl);
+            ImGui::TableNextColumn();
+            draw_register(machine, "IX", &Machine::get_ix, &Machine::set_ix);
+            draw_register(machine, "IY", &Machine::get_iy, &Machine::set_iy);
+            draw_register(machine, "SP", &Machine::get_sp, &Machine::set_sp);
+            draw_register(machine, "PC", &Machine::get_pc, &Machine::set_pc);
+            ImGui::TableNextColumn();
+            draw_register(machine, "IR", &Machine::get_ir, &Machine::set_ir);
+            bool iff1 = machine.get_iff1();
+            if(ImGui::Checkbox("IFF1", &iff1))
+                machine.set_iff1(iff1);
+            bool iff2 = machine.get_iff2();
+            if(ImGui::Checkbox("IFF2", &iff2))
+                machine.set_iff2(iff2);
+            auto interrupt_mode =
+                static_cast<std::uint8_t>(machine.get_int_mode());
+            ImGui::SetNextItemWidth(55.0f);
+            if(ImGui::InputScalar("IM", ImGuiDataType_U8, &interrupt_mode,
+                                  nullptr, nullptr, "%u"))
+                machine.set_int_mode(std::min<unsigned>(interrupt_mode, 2));
+            ImGui::EndTable();
+        }
+        ImGui::Text("T-states: %llu    ROM: %s    I/O: %s",
+                    static_cast<unsigned long long>(machine.ticks()),
+                    machine.memory().rom_mapped() ? "mapped" : "RAM",
+                    machine.memory().io_mapped() ? "mapped" : "off");
 
-        ImGui::SeparatorText("Memory at PC");
-        const auto pc = static_cast<std::uint16_t>(machine.get_pc());
-        if(ImGui::BeginTable("##Memory", 9,
-                             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("Address");
-            for(int column = 0; column < 8; ++column) {
-                const std::string label =
-                    " +" + std::to_string(column);
-                ImGui::TableSetupColumn(label.c_str());
-            }
+        ImGui::SeparatorText("Disassembly");
+        ImGui::Checkbox("Follow PC", &state.debugger_follow_pc);
+        ImGui::SameLine();
+        ImGui::BeginDisabled(state.debugger_follow_pc);
+        ImGui::SetNextItemWidth(88.0f);
+        ImGui::InputScalar("Address", ImGuiDataType_U16,
+                           &state.debugger_address, nullptr, nullptr, "%04X",
+                           ImGuiInputTextFlags_CharsHexadecimal);
+        ImGui::EndDisabled();
+
+        auto address = state.debugger_follow_pc
+            ? static_cast<std::uint16_t>(machine.get_pc())
+            : state.debugger_address;
+        if(ImGui::BeginTable(
+               "##Disassembly", 4,
+               ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+               ImGuiTableFlags_ScrollY, {0.0f, 230.0f})) {
+            ImGui::TableSetupColumn("BP", ImGuiTableColumnFlags_WidthFixed,
+                                    34.0f);
+            ImGui::TableSetupColumn("Address",
+                                    ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("Bytes",
+                                    ImGuiTableColumnFlags_WidthFixed, 125.0f);
+            ImGui::TableSetupColumn("Instruction");
             ImGui::TableHeadersRow();
-            for(unsigned row = 0; row < 8; ++row) {
-                const auto address =
-                    static_cast<std::uint16_t>(pc + row * 8u);
+            for(unsigned row = 0; row < 18; ++row) {
+                const auto instruction = jondra::decode_instruction(
+                    machine, address);
+                const bool current =
+                    address == static_cast<std::uint16_t>(machine.get_pc());
                 ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("%04X", address);
-                for(unsigned column = 0; column < 8; ++column) {
-                    ImGui::TableSetColumnIndex(static_cast<int>(column + 1));
-                    ImGui::Text("%02X", machine.memory().read(
-                        static_cast<std::uint16_t>(address + column)));
+                if(current) {
+                    ImGui::TableSetBgColor(
+                        ImGuiTableBgTarget_RowBg0,
+                        ImGui::GetColorU32(ImGuiCol_HeaderActive));
                 }
+                ImGui::TableSetColumnIndex(0);
+                ImGui::PushID(static_cast<int>(address));
+                if(ImGui::SmallButton(
+                       machine.has_breakpoint(address) ? "x" : "+")) {
+                    if(machine.has_breakpoint(address))
+                        machine.remove_breakpoint(address);
+                    else
+                        machine.add_breakpoint(address);
+                }
+                ImGui::PopID();
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%04X%s", address, current ? " >" : "");
+                ImGui::TableSetColumnIndex(2);
+                std::string bytes;
+                char byte[4]{};
+                for(unsigned index = 0; index < instruction.length; ++index) {
+                    std::snprintf(byte, sizeof(byte), "%02X",
+                                  instruction.bytes[index]);
+                    if(!bytes.empty())
+                        bytes += ' ';
+                    bytes += byte;
+                }
+                ImGui::TextUnformatted(bytes.c_str());
+                ImGui::TableSetColumnIndex(3);
+                ImGui::TextUnformatted(instruction.text.c_str());
+                address = static_cast<std::uint16_t>(
+                    address + instruction.length);
             }
             ImGui::EndTable();
         }
 
-        ImGui::Spacing();
-        ImGui::TextDisabled(
-            "Register editing, disassembly, breakpoints and timeline "
-            "will be connected in the next UI milestone.");
+        ImGui::SeparatorText("Execution breakpoints");
+        ImGui::SetNextItemWidth(88.0f);
+        ImGui::InputScalar("##BreakpointAddress", ImGuiDataType_U16,
+                           &state.debugger_breakpoint_address,
+                           nullptr, nullptr, "%04X",
+                           ImGuiInputTextFlags_CharsHexadecimal);
+        ImGui::SameLine();
+        if(ImGui::Button("Add")) {
+            machine.add_breakpoint(state.debugger_breakpoint_address);
+            state.status = "Execution breakpoint added";
+        }
+        ImGui::SameLine();
+        ImGui::BeginDisabled(machine.breakpoints().empty());
+        if(ImGui::Button("Clear all"))
+            machine.clear_breakpoints();
+        ImGui::EndDisabled();
+
+        for(const auto breakpoint : machine.breakpoints()) {
+            ImGui::PushID(static_cast<int>(breakpoint));
+            ImGui::Text("$%04X", breakpoint);
+            ImGui::SameLine();
+            if(ImGui::SmallButton("Remove")) {
+                machine.remove_breakpoint(breakpoint);
+                ImGui::PopID();
+                break;
+            }
+            ImGui::PopID();
+            ImGui::SameLine();
+        }
     }
     ImGui::End();
 }

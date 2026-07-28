@@ -12,7 +12,7 @@ migrated.
 - BASIC, Tesla, ViLi and Ondra Plus ROM layouts;
 - DMA video address mapping and dynamic vertical resolution;
 - SDL3 window, nearest-neighbour rendering and keyboard input;
-- Dear ImGui menu bar, toolbar, status bar, settings and debugger shell;
+- Dear ImGui menu bar, toolbar, status bar, settings and interactive debugger;
 - native file dialogs for loading and saving raw or header-based memory blocks;
 - Java-compatible OSN v1/v2 snapshot loading and OSN v2 snapshot saving;
 - cycle-timed tape playback from WAV, CSW and Ondra TAP files, plus CSW
@@ -22,8 +22,8 @@ migrated.
 - 20 ms emulated frame loop, maskable interrupt, NMI, pause and reset;
 - headless core tests.
 
-Timeline rewind and the full graphical debugger still use the Java
-implementation and will be migrated in later milestones.
+Timeline rewind and memory-access watchpoints still use the Java implementation
+and will be migrated in later milestones.
 
 ## Build
 
@@ -96,9 +96,21 @@ executable.
 Emulator controls:
 
 - `F5`: pause/resume
+- `F7`: debugger Step Into (while paused)
+- `F8`: debugger Step Over (while paused)
 - `F11`: NMI
 - `F12`: reset
 - `Escape`: quit
+
+## Debugger
+
+Open **Tools > Debugger** and pause emulation to edit all main and alternate Z80
+registers, interrupt flip-flops and interrupt mode. The debugger disassembles
+memory from PC (or a manually selected address), highlights the next
+instruction, and supports persistent execution breakpoints. Breakpoints stop
+before the marked instruction. **Step Over** runs through `CALL` and `RST`
+instructions to their return address; all other instructions execute as one
+step.
 
 ## Dependency licensing
 

@@ -11,6 +11,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstdio>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -104,7 +105,8 @@ int main(int argc, char** argv) {
                 rom_override = parse_rom(argv[++i]);
             else if(argument == "--help") {
                 std::cout << "Usage: jondra [--rom basic|tesla|vili|plus] [--rom-dir PATH]\n"
-                             "F5 pause, F11 NMI, F12 reset, Escape quit\n";
+                             "F5 pause, F7 step into, F8 step over, "
+                             "F11 NMI, F12 reset, Escape quit\n";
                 return 0;
             } else {
                 throw std::runtime_error("Unknown argument: " + std::string(argument));
@@ -238,6 +240,12 @@ int main(int argc, char** argv) {
                             running = false;
                         else if(event.key.scancode == SDL_SCANCODE_F5)
                             paused = !paused;
+                        else if(event.key.scancode == SDL_SCANCODE_F7 &&
+                                paused)
+                            machine.step_instruction();
+                        else if(event.key.scancode == SDL_SCANCODE_F8 &&
+                                paused)
+                            paused = !machine.step_over();
                         else if(event.key.scancode == SDL_SCANCODE_F11)
                             machine.nmi();
                         else if(event.key.scancode == SDL_SCANCODE_F12)
@@ -252,8 +260,16 @@ int main(int argc, char** argv) {
 
             running &= !ui_state.quit_requested;
             if(!paused) {
-                machine.run_frame();
-                if(audio_stream != nullptr) {
+                const bool frame_completed = machine.run_frame();
+                if(!frame_completed && machine.breakpoint_hit()) {
+                    paused = true;
+                    char message[64]{};
+                    std::snprintf(
+                        message, sizeof(message), "Breakpoint hit at $%04X",
+                        static_cast<unsigned>(machine.breakpoint_address()));
+                    ui_state.status = message;
+                }
+                if(audio_stream != nullptr && frame_completed) {
                     const auto samples = machine.audio().frame();
                     if(!SDL_PutAudioStreamData(
                            audio_stream, samples.data(),

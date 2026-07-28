@@ -34,6 +34,9 @@ struct UiState {
     std::uint16_t binary_run_address = 0x4000;
     std::uint16_t binary_save_first = 0x4000;
     std::uint16_t binary_save_last = 0xffff;
+    std::uint16_t debugger_address = 0;
+    std::uint16_t debugger_breakpoint_address = 0;
+    bool debugger_follow_pc = true;
     std::string binary_load_path;
     std::string binary_save_path;
     std::string snapshot_load_path;
