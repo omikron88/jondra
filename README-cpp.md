@@ -111,7 +111,8 @@ memory from PC (or a manually selected address), highlights the next
 instruction, and supports persistent execution breakpoints. Breakpoints stop
 before the marked instruction. **Step Over** runs through `CALL` and `RST`
 instructions to their return address; all other instructions execute as one
-step.
+step. The named F-register flags use the original debugger's `M/P`, `Z/NZ`,
+`AC/NA`, `PE/PO`, `N1/N0` and `C/NC` notation; click a flag to toggle it.
 
 ## Dependency licensing
 

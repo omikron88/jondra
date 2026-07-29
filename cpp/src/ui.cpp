@@ -831,6 +831,43 @@ void draw_register(Machine& machine, const char* label,
         (machine.*setter)(value);
 }
 
+void draw_cpu_flags(Machine& machine) {
+    struct Flag {
+        std::uint8_t mask;
+        const char* set_label;
+        const char* clear_label;
+        const char* description;
+    };
+    static constexpr std::array flags{
+        Flag{0x80u, "M", "P", "sign"},
+        Flag{0x40u, "Z", "NZ", "zero"},
+        Flag{0x10u, "AC", "NA", "half carry"},
+        Flag{0x04u, "PE", "PO", "parity / overflow"},
+        Flag{0x02u, "N1", "N0", "add / subtract"},
+        Flag{0x01u, "C", "NC", "carry"},
+    };
+
+    ImGui::TextDisabled("F:");
+    ImGui::SameLine(0.0f, 5.0f);
+    for(std::size_t index = 0; index < flags.size(); ++index) {
+        const auto& flag = flags[index];
+        const bool set = (machine.get_f() & flag.mask) != 0;
+        if(index != 0)
+            ImGui::SameLine(0.0f, 7.0f);
+        ImGui::PushID(static_cast<int>(flag.mask));
+        ImGui::TextColored(
+            set ? ImVec4{0.95f, 0.95f, 0.95f, 1.0f}
+                : ImVec4{0.42f, 0.42f, 0.42f, 1.0f},
+            "%s", set ? flag.set_label : flag.clear_label);
+        if(ImGui::IsItemClicked())
+            machine.set_f(machine.get_f() ^ flag.mask);
+        if(ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s flag: %s (click to toggle)",
+                              flag.description, set ? "set" : "clear");
+        ImGui::PopID();
+    }
+}
+
 void draw_debugger(Machine& machine, bool& paused, UiState& state) {
     if(!state.show_debugger)
         return;
@@ -869,6 +906,7 @@ void draw_debugger(Machine& machine, bool& paused, UiState& state) {
                              ImGuiTableFlags_SizingStretchSame)) {
             ImGui::TableNextColumn();
             draw_register(machine, "AF", &Machine::get_af, &Machine::set_af);
+            draw_cpu_flags(machine);
             draw_register(machine, "BC", &Machine::get_bc, &Machine::set_bc);
             draw_register(machine, "DE", &Machine::get_de, &Machine::set_de);
             draw_register(machine, "HL", &Machine::get_hl, &Machine::set_hl);
