@@ -89,10 +89,12 @@ public final class Memory {
     }        
       
     public byte readRam(int address) {
+        address &= 0xffff;
         return Ram[address >>> PAGE_BIT][address & PAGE_MASK];
     }
 
-    public byte readByte(int address) {        
+    public byte readByte(int address) {
+        address &= 0xffff;
         if(readPages[address >>> PAGE_BIT] == IOVect){
             //kvuli cteni klavesnice
            return readPages[address >>> PAGE_BIT][address & 0xFF];  
@@ -101,13 +103,17 @@ public final class Memory {
         return readPages[address >>> PAGE_BIT][address & PAGE_MASK];
     }
     
-    public void writeByte(int address, byte value) {
-        if(writePages[address >>> PAGE_BIT] != fakeROM){             
-            writePages[address >>> PAGE_BIT][address & PAGE_MASK] = value;
-            if (address>=0xd800) {
-                m.processVram(address);
-            }           
+    public boolean writeByte(int address, byte value) {
+        address &= 0xffff;
+        if (writePages[address >>> PAGE_BIT] == fakeROM) {
+            return false;
         }
+
+        writePages[address >>> PAGE_BIT][address & PAGE_MASK] = value;
+        if (address >= 0xd800) {
+            m.processVram(address);
+        }
+        return true;
     }
     
     public void mapIO(boolean state) {
@@ -459,20 +465,36 @@ public final class Memory {
     }
     
     public byte[] copyRamToByteArray() {
-    // Celková velikost RAM je 32 stránek po 2 KB
-    int totalRamSize = 32 * PAGE_SIZE;
-    byte[] ramCopy = new byte[totalRamSize];
+        // Celková velikost RAM je 32 stránek po 2 KB
+        int totalRamSize = 32 * PAGE_SIZE;
+        byte[] ramCopy = new byte[totalRamSize];
 
-    // Iterace přes každou stránku RAM
-    for (int pageIndex = 0; pageIndex < Ram.length; pageIndex++) {
-        System.arraycopy(Ram[pageIndex], 0, ramCopy, pageIndex * PAGE_SIZE, PAGE_SIZE);
+        // Iterace přes každou stránku fyzické RAM.
+        for (int pageIndex = 0; pageIndex < Ram.length; pageIndex++) {
+            System.arraycopy(Ram[pageIndex], 0, ramCopy,
+                    pageIndex * PAGE_SIZE, PAGE_SIZE);
+        }
+
+        return ramCopy;
     }
 
-    return ramCopy;
-   }
-    
+    public void loadRamFromByteArray(byte[] source, int offset) {
+        int totalRamSize = Ram.length * PAGE_SIZE;
+        if (source == null || offset < 0
+                || offset > source.length - totalRamSize) {
+            throw new IllegalArgumentException("Incomplete RAM image");
+        }
+
+        for (int pageIndex = 0; pageIndex < Ram.length; pageIndex++) {
+            System.arraycopy(source, offset + pageIndex * PAGE_SIZE,
+                    Ram[pageIndex], 0, PAGE_SIZE);
+        }
+    }
+
     public byte[][] getRamPages() {
-     return readPages;     
+        // Timeline musi ukladat fyzickou RAM pod ROM a memory mapped I/O,
+        // nikoli aktualne namapovane stranky pro cteni.
+        return Ram;
     }
 
     

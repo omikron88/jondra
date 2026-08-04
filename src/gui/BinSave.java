@@ -53,18 +53,25 @@ public class BinSave extends javax.swing.JFrame {
         setVisible(true);
     }
     
-     private static String getPath() {
-        String retVal = "";
-        if(Config.strSaveBinFilePath.isEmpty()){
-         retVal = Ondra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        }else{
-         retVal=Config.strSaveBinFilePath;  
+    private static File getPath() {
+        if (!Config.strBinFilePath.isEmpty()) {
+            File lastFile = new File(Config.strBinFilePath);
+            File parentDirectory = lastFile.getParentFile();
+
+            if (parentDirectory != null && parentDirectory.isDirectory()) {
+                return parentDirectory;
+            }
         }
-        if (retVal.contains("/")) {
-            int pos = retVal.lastIndexOf("/");
-            retVal = retVal.substring(0, pos + 1);
+        File applicationPath = new File(
+                JOndra.class.getProtectionDomain()
+                        .getCodeSource()
+                        .getLocation()
+                        .getPath()
+        );
+        if (applicationPath.isFile()) {
+            applicationPath = applicationPath.getParentFile();
         }
-        return retVal;
+        return applicationPath;
     }
      
 
@@ -180,7 +187,7 @@ public class BinSave extends javax.swing.JFrame {
          JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("Select file for save data");
         fc.resetChoosableFileFilters();
-        fc.setCurrentDirectory(new File(getPath()));
+        fc.setCurrentDirectory(getPath());
         fc.setAcceptAllFileFilterUsed(true);
         int val = fc.showOpenDialog(this);
         

@@ -430,8 +430,11 @@ public class Ondra extends Thread
         }
         if (bExe) {
             clk.addTstates(3);
-            mem.writeByte(address, (byte) value);
-            cpu.timeline.addChange(address, (byte) value);
+            // Zapis do zapnute ROM nebo memory mapped I/O se na skutecnem
+            // stroji zahodi. Timeline proto smi zaznamenat jen realny zapis RAM.
+            if (mem.writeByte(address, (byte) value)) {
+                cpu.timeline.addChange(address, (byte) value);
+            }
         }
     }
 
@@ -968,12 +971,8 @@ public class Ondra extends Thread
         state.setNMI((tmp & 8) != 0);
         state.setINTLine((tmp & 16) != 0);
         state.setHalted((tmp & 32) != 0);
-        dmaEnabled = (tmp & 64) != 0;
-        if ((tmp & 128) != 0) {
-            nDMAStatus = 1;
-        } else {
-            nDMAStatus = 0;
-        }
+        boolean snapshotDmaEnabled = (tmp & 64) != 0;
+        int snapshotDmaStatus = ((tmp & 128) != 0) ? 1 : 0;
 
         state.setRegR(snapshot[index++]);
         state.setRegF(snapshot[index++]);
@@ -1001,45 +1000,49 @@ public class Ondra extends Thread
         state.setMemPtr(tmp);
 
         cpu.setZ80State(state);
-        
-        boolean dmaEnabledBckp=dmaEnabled;
-        if (dmaEnabled) {
-            dmaEnable();
-        } else {
-            dmaDisable();
-        }
 
-        outPort(0x0e, snapshot[index++]);
-        outPort(0x0d, snapshot[index++]);
-        outPort(0x03, snapshot[index++]);
-
-        nRozliseni = snapshot[index++] & 0xff;
-        
+        int snapshotPortA0 = snapshot[index++] & 0xff;
+        int snapshotPortA1 = snapshot[index++] & 0xff;
+        int snapshotPortA3 = snapshot[index++] & 0xff;
+        int snapshotResolution = snapshot[index++] & 0xff;
 
         long lTstates = 0;
         for (int i = 0; i < 8; i++) {
             lTstates = (lTstates << 8) | (snapshot[index++] & 0xFF);
         }
-        cpu.clock.setTstates(lTstates);
 
-        // Načtení celé paměti RAM
-        for (int addr = 0; addr < 0x10000; addr++) {
-            mem.writeByte(addr, snapshot[index++]);
-        }
-        int nDMAStatusBkp=nDMAStatus;
-        dmaEnable();
-        nDMAStatus=1;
+        // Timeline obsahuje fyzickou RAM. Je nutne ji obnovit primo,
+        // nezavisle na tom, zda je v danem okamziku namapovana ROM nebo I/O.
+        mem.loadRamFromByteArray(snapshot, index);
+        index += 0x10000;
+
+        // Obrazove tabulky a porty obnovujeme az nad kompletni RAM, aby se
+        // nikdy nevykreslil mezistav z castecne nahrane videopameti.
+        nRozliseni = snapshotResolution;
+        nDMAStatus = snapshotDmaStatus;
         changeResolution();
-        genDispTables();
-        for (int i = 0xd800; i < 0x10000; i++) {
-            processVram(i);
+
+        outPort(0x0e, snapshotPortA0);
+        outPort(0x0d, snapshotPortA1);
+        outPort(0x03, snapshotPortA3);
+
+        // Tyto dva udaje jsou ve snapshotu ulozeny samostatne. Bezny stav je
+        // shodny s bitem 0 portu A3, ale timeline obnovi presne ulozeny stav.
+        nDMAStatus = snapshotDmaStatus;
+        if (nDMAStatus == 0) {
+            t_frame = T_DMAOFF;
+        } else {
+            t_frame = T_DMAON + t_resolution_correct;
         }
-        if (dmaEnabledBckp) {
-            dmaEnable();            
+        if (snapshotDmaEnabled) {
+            dmaEnable();
         } else {
             dmaDisable();
         }
-        nDMAStatus=nDMAStatusBkp;
+
+        // outPort() pridava T-stavy, proto hodiny nastavime az nakonec.
+        cpu.clock.setTstates(lTstates);
+        scr.repaint();
     }
 
     private void cpu_debug(String prefix) {

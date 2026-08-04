@@ -27,15 +27,21 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Rectangle2D;
+import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
+import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
+import javax.swing.SwingWorker;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
 import javax.swing.text.DefaultHighlighter;
@@ -94,6 +100,7 @@ public class Debugger extends javax.swing.JFrame {
     Integer nByteAddress = null;
     Font fntDefaultMonospace = null;
     private Boolean enoughMemoryForTimeline = null;
+    private javax.swing.JButton jExportTimeline;
     //v pripade, ze se jedna o step into bez historie predchoziho kodu (napr. skok pri nahrati image)
     public boolean bSpecialStepInto = false;
     //aby se updaty slideru vzajemne nechtene neovlivnovali
@@ -108,6 +115,7 @@ public class Debugger extends javax.swing.JFrame {
      */
     public Debugger(Ondra inM) {
         initComponents();
+        initTimelineExportButton();
         setIconImage((new ImageIcon(getClass().getResource("/icons/debugger.png")).getImage()));
 
         getRootPane().getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(
@@ -351,6 +359,161 @@ public class Debugger extends javax.swing.JFrame {
         });
     }
 
+
+    /**
+     * Tlacitko Export timeline
+     */
+    private void initTimelineExportButton() {
+        jExportTimeline = new javax.swing.JButton("Export TXT");
+        jExportTimeline.setToolTipText("Export timeline as assembler trace");
+        jExportTimeline.setVisible(false);
+        jExportTimeline.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                exportTimelineToText();
+            }
+        });
+
+        getLayeredPane().add(jExportTimeline, JLayeredPane.PALETTE_LAYER);
+        positionTimelineExportButton();
+    }
+
+    private void updateTimelineExportButtonVisibility() {
+        boolean hasExportableTimeline = utils.Config.bEnableTimeline
+                && m != null
+                && m.cpu != null
+                && m.cpu.timeline != null
+                && m.cpu.timeline.getTimelineSize() >= 2;
+
+        jExportTimeline.setVisible(hasExportableTimeline);
+    }
+
+    private void positionTimelineExportButton() {
+        int width = 110;
+        int height = 26;
+        int x = Math.max(0, getLayeredPane().getWidth() - width - 15);
+        int y = Math.max(0, getLayeredPane().getHeight() - height - 17);
+        jExportTimeline.setBounds(x, y, width, height);
+    }
+
+    private File getTimelineDirectory() {
+        // Prednost ma adresar posledni zvolene binarky.
+        if (!utils.Config.strBinFilePath.isEmpty()) {
+            File binDirectory = new File(utils.Config.strBinFilePath)
+                    .getAbsoluteFile().getParentFile();
+            if (binDirectory != null && binDirectory.isDirectory()) {
+                return binDirectory;
+            }
+        }
+
+        // Pokud nebyla binarka zvolena nebo uz neexistuje ani jeji adresar,
+        // nabidni adresar, ve kterem je spusteny JAR nebo adresar trid.
+        try {
+            File location = new File(Debugger.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            File applicationDirectory = location.isDirectory()
+                    ? location : location.getParentFile();
+            if (applicationDirectory != null
+                    && applicationDirectory.isDirectory()) {
+                return applicationDirectory;
+            }
+        } catch (Exception ex) {
+            // Zalozni pracovni adresar se pouzije nize.
+        }
+
+        return new File(System.getProperty("user.dir"));
+    }
+
+    private String getTimelineFileName() {
+        String baseName = "";
+
+        if (!utils.Config.strBinFilePath.isEmpty()) {
+            baseName = new File(utils.Config.strBinFilePath).getName();
+            int extensionPos = baseName.lastIndexOf('.');
+            if (extensionPos > 0) {
+                baseName = baseName.substring(0, extensionPos);
+            }
+        }
+
+        String timestamp = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss")
+                .format(new Date());
+        if (!baseName.isEmpty()) {
+            return baseName + "-timeline-" + timestamp + ".txt";
+        }
+        return "timeline-" + timestamp + ".txt";
+    }
+
+    private void exportTimelineToText() {
+        if (m == null || m.cpu.timeline.getTimelineSize() < 2) {
+            JOptionPane.showMessageDialog(this,
+                    "Timeline does not contain any completed instruction.",
+                    "Export timeline",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Export timeline");
+        chooser.setFileFilter(new FileNameExtensionFilter("Text files (*.txt)", "txt"));
+
+        File timelineDirectory = getTimelineDirectory();
+        chooser.setCurrentDirectory(timelineDirectory);
+        chooser.setSelectedFile(new File(timelineDirectory, getTimelineFileName()));
+
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File selectedFile = chooser.getSelectedFile();
+        if (!selectedFile.getName().toLowerCase().endsWith(".txt")) {
+            File parent = selectedFile.getParentFile();
+            selectedFile = new File(parent, selectedFile.getName() + ".txt");
+        }
+
+        if (selectedFile.exists()
+                && JOptionPane.showConfirmDialog(this,
+                        "The file already exists. Overwrite it?",
+                        "Export timeline",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        final File exportFile = selectedFile;
+        jExportTimeline.setEnabled(false);
+        jExportTimeline.setText("Exporting...");
+        setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR));
+
+        new SwingWorker<Integer, Void>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                return m.cpu.timeline.exportToText(exportFile);
+            }
+
+            @Override
+            protected void done() {
+                jExportTimeline.setEnabled(true);
+                jExportTimeline.setText("Export TXT");
+                setCursor(java.awt.Cursor.getDefaultCursor());
+
+                try {
+                    int records = get();
+                    JOptionPane.showMessageDialog(Debugger.this,
+                            "Exported " + records + " instructions to:\n"
+                            + exportFile.getAbsolutePath(),
+                            "Export timeline",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    JOptionPane.showMessageDialog(Debugger.this,
+                            "Timeline export failed:\n" + cause.getMessage(),
+                            "Export timeline",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
+    }
+
     public void updateOriginalFlags() {
         originalFlags = m.cpu.getFlags();
     }
@@ -414,13 +577,15 @@ public class Debugger extends javax.swing.JFrame {
         //vyplni textove pole s assemblerem
         jTextAsmCode.setText("");
         Z80Dis disassembler = new Z80Dis();
-        Z80Dis.Opcodes = new int[65536];
-        int memPtr = m.cpu.getRegPC();
+        // Instrukce na konci adresniho prostoru muze pokracovat od 0000h.
+        // Ctyri pomocne bajty dovoli disassembleru cist i za indexem FFFFh.
+        Z80Dis.Opcodes = new int[65600];
+        int memPtr = m.cpu.getRegPC() & 0xffff;
         for (int j = 0; j < 13; j++) {
             int memPtrTmp = memPtr;
             for (int i = memPtr; i < memPtr + 5; i++) {
                 Z80Dis.Opcodes[i] = (0xff) & (byte) m.mem.readByte(memPtrTmp);
-                memPtrTmp++;
+                memPtrTmp = (memPtrTmp + 1) & 0xffff;
             }
             byte OpcodeLen = disassembler.OpcodeLen(memPtr);
             String instdata = "";
@@ -430,7 +595,7 @@ public class Debugger extends javax.swing.JFrame {
             for (int i = 0; i < 4 - OpcodeLen; i++) {
                 instdata += "  ";
             }
-            String instrukce = String.format("#%04X", memPtr) + " " + instdata + " " + disassembler.Disassemble(memPtr) + "\n";
+            String instrukce = String.format("#%04X", memPtr & 0xffff) + " " + instdata + " " + disassembler.Disassemble(memPtr) + "\n";
             jTextAsmCode.append(instrukce);
             if (j == 0) {
                 Highlighter h = jTextAsmCode.getHighlighter();
@@ -438,10 +603,10 @@ public class Debugger extends javax.swing.JFrame {
                     h.addHighlight(0, instrukce.length() - 1, DefaultHighlighter.DefaultPainter);
                 } catch (Exception e1) {
                 }
-                stpBP.nAdress = memPtr + OpcodeLen;
+                stpBP.nAdress = (memPtr + OpcodeLen) & 0xffff;
                 stpBP.bStatus = false;
             }
-            memPtr += OpcodeLen;
+            memPtr = (memPtr + OpcodeLen) & 0xffff;
         }
     }
 
@@ -510,16 +675,10 @@ public class Debugger extends javax.swing.JFrame {
     public void fillStack() {
         jTextStack.setText("");
         StyledDocument doc = jTextStack.getStyledDocument();
-        int nSPAdr = m.cpu.getRegSP();
-        for (int i = nSPAdr; i < nSPAdr + 10; i += 2) {
-            int i1 = i;
-            int i2 = i + 1;
-            if (i1 > 65535) {
-                i1 = i1 - 65535;
-            }
-            if (i2 > 65535) {
-                i2 = i2 - 65535;
-            }
+        int nSPAdr = m.cpu.getRegSP() & 0xffff;
+        for (int offset = 0; offset < 10; offset += 2) {
+            int i1 = (nSPAdr + offset) & 0xffff;
+            int i2 = (i1 + 1) & 0xffff;
             String strLine = String.format("#%04X #%04X\n", i1, 256 * ((0xff) & (byte) m.mem.readByte(i2)) + ((0xff) & (byte) m.mem.readByte(i1)));
             try {
                 doc.insertString(doc.getLength(), strLine, null);
@@ -802,6 +961,8 @@ public class Debugger extends javax.swing.JFrame {
             jTimeBack.setEnabled(false);
             jTimeForward.setEnabled(false);
         }
+
+        updateTimelineExportButtonVisibility();
     }
 
     public void showDialog() {

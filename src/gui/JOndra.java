@@ -14,6 +14,8 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -196,54 +198,71 @@ public class JOndra extends javax.swing.JFrame {
         setVisible(true); // Zajištění viditelnosti
     }
 
+    private static int readWordLE(DataInputStream input) throws IOException {
+        return input.readUnsignedByte() | (input.readUnsignedByte() << 8);
+    }
+
     public void LoadBinSilently(boolean bAutoStart) {
-        if (strArgFile.length() > 0) {
-            String strFile = "";
-            if (strArgFile.contains("/") || strArgFile.contains("\\")) {
-                strFile = strArgFile;
-            } else {
-                strFile = strHomeDirectory + "/" + strArgFile;
-            }
-            m.stopEmulation();
-            BufferedInputStream fIn;
-            try {
-                m.mem.mapRom(false);
-                fIn = new BufferedInputStream(new FileInputStream(strFile));
-                boolean bFinish = false;
-                while (!bFinish) {
-                    int bType = fIn.read();
-                    if (bType == -1) {
-                        bFinish = true;
+        if (strArgFile.isEmpty()) {
+            return;
+        }
+
+        File inputFile = new File(strArgFile);
+        // Relativní cestu nejdřív hledáme vůči pracovnímu adresáři,
+        // teprve potom vedle JARu jako v původní implementaci.
+        if (!inputFile.isAbsolute() && !inputFile.isFile()) {
+            inputFile = new File(strHomeDirectory, strArgFile);
+        }
+
+        m.stopEmulation();
+        try (DataInputStream input = new DataInputStream(
+                new BufferedInputStream(new FileInputStream(inputFile)))) {
+
+            // ROM odmapujeme až po úspěšném otevření souboru.
+            m.mem.mapRom(false);
+            boolean runBlockFound = false;
+
+            while (!runBlockFound) {
+                final int blockType;
+                try {
+                    blockType = input.readUnsignedByte();
+                } catch (EOFException ex) {
+                    throw new IOException("Missing run block in " + inputFile, ex);
+                }
+
+                switch (blockType) {
+                    case 1: {
+                        int address = readWordLE(input);
+                        int blockLength = readWordLE(input);
+                        byte[] contents = new byte[blockLength];
+
+                        // read() nemusí vrátit celý blok. readFully() ano, nebo vyhodí chybu.
+                        input.readFully(contents);
+                        for (byte value : contents) {
+                            m.mem.writeByte(address, value);
+                            address = (address + 1) & 0xffff;
+                        }
                         break;
                     }
-                    int nMemAdr = 0;
-                    int bBlockLen = 0;
-                    if (bType == 1) {
-                        //blok dat k ulozeni do RAM
-                        nMemAdr = fIn.read() + 256 * fIn.read();
-                        bBlockLen = fIn.read() + 256 * fIn.read();
-                        byte[] contents = new byte[bBlockLen];
-                        int bytesRead = fIn.read(contents);
-                        if (bytesRead != -1) {
-                            for (int i = 0; i < bytesRead; i++) {
-                                m.mem.writeByte(nMemAdr, contents[i]);
-                                nMemAdr++;
-                            }
-                        }
-                    } else if (bType == 2) {
-                        //blok ke spusteni                        
-                        nMemAdr = fIn.read() + 256 * fIn.read();
-                        m.cpu.setRegPC(nMemAdr);
-                        bFinish = true;
+
+                    case 2: {
+                        m.cpu.setRegPC(readWordLE(input));
+                        runBlockFound = true;
                         break;
-                    } else {
-                        m.Reset(true);
-                        break;
-                    };
+                    }
+
+                    default:
+                        throw new IOException(String.format(
+                                "Unknown block type 0x%02X in %s", blockType, inputFile));
                 }
-            } catch (Exception e) {
             }
-            //nastavim Ondru na spravnou rychlost
+        } catch (Exception ex) {
+            Logger.getLogger(JOndra.class.getName()).log(
+                    Level.SEVERE, "Cannot load command-line image " + inputFile, ex);
+
+            // Nenecháme CPU pokračovat s odmapovanou ROM a neúplnými daty.
+            m.Reset(true);
+        } finally {
             m.setClockSpeed(20);
             if (bAutoStart) {
                 m.startEmulation();

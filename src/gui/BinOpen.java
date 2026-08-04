@@ -211,25 +211,33 @@ public class BinOpen extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private static String getPath() {
-        String retVal = "";
-        if (Config.strBinFilePath.isEmpty()) {
-            retVal = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        } else {
-            retVal = Config.strBinFilePath;
+    private static File getPath() {
+        if (!Config.strBinFilePath.isEmpty()) {
+            File lastFile = new File(Config.strBinFilePath);
+            File parentDirectory = lastFile.getParentFile();
+            
+            if (parentDirectory != null && parentDirectory.isDirectory()) {
+                return parentDirectory;
+            }
         }
-        if (retVal.contains("/")) {
-            int pos = retVal.lastIndexOf("/");
-            retVal = retVal.substring(0, pos + 1);
+
+        File applicationPath = new File(
+                JOndra.class.getProtectionDomain()
+                        .getCodeSource()
+                        .getLocation()
+                        .getPath()
+        );
+        if (applicationPath.isFile()) {
+            applicationPath = applicationPath.getParentFile();
         }
-        return retVal;
+        return applicationPath;
     }
 
     private void jButtonBinOpenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonBinOpenActionPerformed
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle("Open binary file");
         fc.resetChoosableFileFilters();
-        fc.setCurrentDirectory(new File(getPath()));
+        fc.setCurrentDirectory(getPath());
         fc.setAcceptAllFileFilterUsed(true);
         int val = fc.showOpenDialog(this);
 

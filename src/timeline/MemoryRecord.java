@@ -8,18 +8,24 @@ class MemoryRecord {
     public static final int SNAPSHOT = 1;
     public static final int STEP = 2;
 
-    private final int type; // Typ záznamu
+    private final int type; // Typ zaznamu
     private byte[] memory; // Pro snapshot
-    private List<ChangeLog> changes; // Pro krok
-    public static final int nMemBaseAddress=42;
-    // Konstruktor pro snapshot
+    private List<ChangeLog> changes; // Zmeny provedene predchozi instrukci
+    public static final int nMemBaseAddress = 42;
+
+    // Konstruktor pro snapshot bez seznamu zmen (pouziva se pro prvni stav).
     public MemoryRecord(byte[] memory) {
-        this.type = SNAPSHOT;
-        this.memory = memory;
-        this.changes = null;
+        this(memory, null);
     }
 
-    // Konstruktor pro krok
+    // Konstruktor pro snapshot vcetne skutecnych zapisu predchozi instrukce.
+    public MemoryRecord(byte[] memory, List<ChangeLog> changes) {
+        this.type = SNAPSHOT;
+        this.memory = memory;
+        this.changes = changes;
+    }
+
+    // Konstruktor pro krok.
     public MemoryRecord(List<ChangeLog> changes) {
         this.type = STEP;
         this.memory = null;
@@ -38,41 +44,38 @@ class MemoryRecord {
         return changes;
     }
 
-    // Metoda pro uvolnění paměti
+    // Metoda pro uvolneni pameti.
     public void clear() {
-        memory = null; // Uvolnění reference na pole memory
+        memory = null;
 
         if (changes != null) {
-            // Uvolnění jednotlivých položek v seznamu
             for (int i = 0; i < changes.size(); i++) {
                 changes.set(i, null);
             }
-            changes.clear(); // Vymazání samotného seznamu
-
+            changes.clear();
         }
     }
 
-    // Metoda pro uvolnění paměti
+    // Metoda pro uplne uvolneni pameti.
     public void clearAll() {
-        memory = null; // Uvolnění reference na pole memory
+        memory = null;
 
         if (changes != null) {
-            // Uvolnění jednotlivých položek v seznamu
             for (int i = 0; i < changes.size(); i++) {
                 ChangeLog changeLog = changes.get(i);
                 if (changeLog != null) {
-                    changeLog.clear(); // Uvolnění ChangeLog objektu
+                    changeLog.clear();
                 }
                 changes.set(i, null);
             }
-            changes.clear(); // Vymazání samotného seznamu
+            changes.clear();
             changes = null;
         }
     }
 
     public void dumpInfo(int index) {
         String header = String.format("MemoryRecord Dump (Index: %d)", index);
-        int padding = (41 - header.length()) / 2; // Dynamické odsazení
+        int padding = (41 - header.length()) / 2;
         String leftPad = String.format("%" + padding + "s", "");
         String rightPad = String.format("%" + (41 - header.length() - padding) + "s", "");
 
@@ -94,9 +97,9 @@ class MemoryRecord {
                     String detail = getChangeDetail(change, memoryBaseAddress);
                     String changeHeader = String.format("Change %d (%s)", i++, detail);
                     int changePadding = 41 - changeHeader.length() - 5;
-                    System.out.printf("| *** %s%" + changePadding + "s|\n", changeHeader, ""); // Zarovnané
+                    System.out.printf("| *** %s%" + changePadding + "s|\n", changeHeader, "");
                     System.out.println("+-----------------------------------------+");
-                    change.dumpInfo(); // Výpis změny z třídy ChangeLog
+                    change.dumpInfo();
                     System.out.println("+-----------------------------------------+");
                 }
             } else {
@@ -110,12 +113,11 @@ class MemoryRecord {
     private String getChangeDetail(ChangeLog change, int memoryBaseAddress) {
         int address = change.address;
 
-        // Adresy registrů a stavů podle `saveSnapshotToArray()`
         if (address == 0) {
             return "Register I";
         } else if (address >= 1 && address <= 14) {
-            // 1–14: Jednotlivé registry (Lx, Hx, Ex, Dx, Cx, Bx, Fx, Ax, L, H, E, D, C, B)
-            String[] regNames = {"Lx", "Hx", "Ex", "Dx", "Cx", "Bx", "Fx", "Ax", "L", "H", "E", "D", "C", "B"};
+            String[] regNames = {"Lx", "Hx", "Ex", "Dx", "Cx", "Bx", "Fx", "Ax",
+                "L", "H", "E", "D", "C", "B"};
             return "Register " + regNames[address - 1];
         } else if (address == 15) {
             return "Register IY (Low)";
@@ -148,24 +150,17 @@ class MemoryRecord {
         } else if (address == 29) {
             return "Register MemPtr (High)";
         } else if (address >= 30 && address <= 32) {
-            // Porty A0, A1, A3
             return "Port A" + (address - 30);
         } else if (address == 33) {
             return "Screen Resolution";
         } else if (address < memoryBaseAddress) {
-            // T-states
             return "T-states";
-        } else if (address >= memoryBaseAddress) {
-            // Paměťový prostor
+        } else {
             int realAddress = address - memoryBaseAddress;
             return String.format("Memory 0x%04X", realAddress);
         }
-
-        return "Unknown";
     }
 
-    
-    // Pomocná metoda pro převod pole byte na hexa řetězec
     private String byteArrayToString(byte[] array) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < array.length; i++) {
