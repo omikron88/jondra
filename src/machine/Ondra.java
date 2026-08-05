@@ -432,7 +432,8 @@ public class Ondra extends Thread
             clk.addTstates(3);
             // Zapis do zapnute ROM nebo memory mapped I/O se na skutecnem
             // stroji zahodi. Timeline proto smi zaznamenat jen realny zapis RAM.
-            if (mem.writeByte(address, (byte) value)) {
+            if (mem.writeByte(address, (byte) value)
+                    && utils.Config.bEnableTimeline) {
                 cpu.timeline.addChange(address, (byte) value);
             }
         }

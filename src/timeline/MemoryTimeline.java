@@ -48,35 +48,37 @@ public class MemoryTimeline {
     // Zpracovani noveho stavu. Zaznam na indexu N predstavuje stav CPU
     // pred instrukci N. Zmeny ulozene v tomto zaznamu provedla instrukce N-1.
     public void update(byte[] currentMemory) {
-        if (currentMemory == null || currentMemory.length != previousMemory.length) {
-            throw new IllegalArgumentException("Unexpected timeline snapshot size");
+        synchronized (lock) {
+            if (currentMemory == null || currentMemory.length != previousMemory.length) {
+                throw new IllegalArgumentException("Unexpected timeline snapshot size");
+            }
+
+            if (timeline.isEmpty()) {
+                prubezneZmeny.clear();
+                addRecord(new MemoryRecord(Arrays.copyOf(currentMemory, currentMemory.length),
+                        new ArrayList<ChangeLog>()));
+                System.arraycopy(currentMemory, 0, previousMemory, 0, currentMemory.length);
+                return;
+            }
+
+            stepCount++;
+
+            // Zmeny je nutne odebrat i pri pravidelnem snapshotu. Puvodni kod
+            // je pri snapshotu nechal v prubezneZmeny a priradil je az dalsi instrukci.
+            List<ChangeLog> changes = compareMemoryWithCRC(previousMemory, currentMemory);
+
+            if (stepCount >= snapshotInterval) {
+                addRecord(new MemoryRecord(Arrays.copyOf(currentMemory, currentMemory.length), changes));
+                stepCount = 0;
+            } else if (changes.size() > currentMemory.length / 2) {
+                addRecord(new MemoryRecord(Arrays.copyOf(currentMemory, currentMemory.length), changes));
+                stepCount = 0;
+            } else {
+                addRecord(new MemoryRecord(changes));
+            }
+
+            System.arraycopy(currentMemory, 0, previousMemory, 0, previousMemory.length);
         }
-
-        if (timeline.isEmpty()) {
-            prubezneZmeny.clear();
-            addRecord(new MemoryRecord(Arrays.copyOf(currentMemory, currentMemory.length),
-                    new ArrayList<ChangeLog>()));
-            System.arraycopy(currentMemory, 0, previousMemory, 0, currentMemory.length);
-            return;
-        }
-
-        stepCount++;
-
-        // Zmeny je nutne odebrat i pri pravidelnem snapshotu. Puvodni kod
-        // je pri snapshotu nechal v prubezneZmeny a priradil je az dalsi instrukci.
-        List<ChangeLog> changes = compareMemoryWithCRC(previousMemory, currentMemory);
-
-        if (stepCount >= snapshotInterval) {
-            addRecord(new MemoryRecord(Arrays.copyOf(currentMemory, currentMemory.length), changes));
-            stepCount = 0;
-        } else if (changes.size() > currentMemory.length / 2) {
-            addRecord(new MemoryRecord(Arrays.copyOf(currentMemory, currentMemory.length), changes));
-            stepCount = 0;
-        } else {
-            addRecord(new MemoryRecord(changes));
-        }
-
-        System.arraycopy(currentMemory, 0, previousMemory, 0, previousMemory.length);
     }
 
     private void addRecord(MemoryRecord record) {
@@ -126,27 +128,29 @@ public class MemoryTimeline {
     // poke8() vola addChange az po zapisu do emulovane pameti. Stary bajt
     // proto bereme z predchoziho timeline stavu. RAM zacina az na offsetu 42.
     public void addChange(int address, byte value) {
-        if (address < 0 || address >= 0x10000) {
-            throw new IllegalArgumentException("Memory address outside Z80 address space: " + address);
-        }
-
-        int stateAddress = MemoryRecord.nMemBaseAddress + address;
-        byte oldValue = previousMemory[stateAddress];
-
-        // Pokud jedna instrukce zapise na stejnou adresu vicekrat, druhy zapis
-        // musi navazovat na vysledek prvniho, ne znovu na stav pred instrukci.
-        for (int i = prubezneZmeny.size() - 1; i >= 0; i--) {
-            ChangeLog previousChange = prubezneZmeny.get(i);
-            if (previousChange != null
-                    && previousChange.address == stateAddress
-                    && previousChange.newValues != null
-                    && previousChange.newValues.length > 0) {
-                oldValue = previousChange.newValues[previousChange.newValues.length - 1];
-                break;
+        synchronized (lock) {
+            if (address < 0 || address >= 0x10000) {
+                throw new IllegalArgumentException("Memory address outside Z80 address space: " + address);
             }
-        }
 
-        prubezneZmeny.add(new ChangeLog(stateAddress, oldValue, value));
+            int stateAddress = MemoryRecord.nMemBaseAddress + address;
+            byte oldValue = previousMemory[stateAddress];
+
+            // Pokud jedna instrukce zapise na stejnou adresu vicekrat, druhy zapis
+            // musi navazovat na vysledek prvniho, ne znovu na stav pred instrukci.
+            for (int i = prubezneZmeny.size() - 1; i >= 0; i--) {
+                ChangeLog previousChange = prubezneZmeny.get(i);
+                if (previousChange != null
+                        && previousChange.address == stateAddress
+                        && previousChange.newValues != null
+                        && previousChange.newValues.length > 0) {
+                    oldValue = previousChange.newValues[previousChange.newValues.length - 1];
+                    break;
+                }
+            }
+
+            prubezneZmeny.add(new ChangeLog(stateAddress, oldValue, value));
+        }
     }
 
     private List<ChangeLog> compareMemoryWithCRC(byte[] previous, byte[] current) {
