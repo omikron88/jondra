@@ -66,6 +66,10 @@ public class Ondra extends Thread
 
     private int t_resolution_correct = 0;
     private int t_frame = T_DMAOFF;
+    // TURBO: takt CPU 2 MHz (1) nebo 4 MHz (2). Meni se jen pocet T-stavu procesoru
+    // na snimek, skutecny cas snimku (20 ms) a video zustavaji stejne.
+    private int cpuMul = 1;
+    private volatile int pendingMul = 1;
     private int nDMAStatus = 0;
 
     private boolean tapestart;
@@ -185,7 +189,7 @@ public class Ondra extends Thread
         portA3 = portA0 = portA1 = 0;
         nDMAStatus = 0;
         t_resolution_correct = 0;
-        t_frame = T_DMAOFF;
+        updateFrameT();                   // TURBO zustava zapnute i po resetu (prepinac v HW)
         cpu.timeline.clearTimeline();
         mem.Reset(dirty);
         mem.mapRom(true);
@@ -298,6 +302,7 @@ public class Ondra extends Thread
             nSpeedPercentUpdateDec -= 20;
         }
         if (!paused) {
+            applyTurbo();
             if (snd.isEnabled()) {
                 snd.switchBuffers(clk.getTstates());
                 snd.setDataReady();
@@ -477,14 +482,40 @@ public class Ondra extends Thread
         return 0xff;
     }
 
+    /** pocet T-stavu procesoru za snimek podle videa a taktu (TURBO) */
+    private void updateFrameT() {
+        t_frame = (nDMAStatus == 0 ? T_DMAOFF : T_DMAON + t_resolution_correct) * cpuMul;
+    }
+
+    /** TURBO: prepni takt CPU 2/4 MHz; projevi se od dalsiho snimku, emulace se neresetuje */
+    public void setTurbo(boolean on) {
+        pendingMul = on ? 2 : 1;
+    }
+
+    public boolean isTurbo() {
+        return pendingMul == 2;
+    }
+
+    /** nasobic taktu CPU proti 2 MHz (1 nebo 2) */
+    public int getCpuMul() {
+        return cpuMul;
+    }
+
+    // vola se na zacatku snimku (vlakno emulace), aby se takt nemenil uprostred snimku
+    private void applyTurbo() {
+        int mul = pendingMul;
+        if (mul != cpuMul) {
+            sd.setCpuMul(mul, clk.getTstates());
+            cpuMul = mul;
+            updateFrameT();
+            Sound.dStates2BufferRatio = (double) (T_DMAOFF * cpuMul) / (double) (2 * Sound.BUFFER_SIZE);
+        }
+    }
+
     public void changeResolution() {
         //zmena rychlosti Ondry na zaklade rozliseni
         t_resolution_correct = (255 - nRozliseni) * 128;
-        if (nDMAStatus == 0) {
-            t_frame = T_DMAOFF;
-        } else {
-            t_frame = T_DMAON + t_resolution_correct;
-        }
+        updateFrameT();
         genDispTables();
     }
 
@@ -507,13 +538,13 @@ public class Ondra extends Thread
                 mem.mapIO(true);
             }
             if ((portA3 & 0x01) == 0) {
-                t_frame = T_DMAOFF;
                 nDMAStatus = 0;
+                updateFrameT();
                 dmaDisable();
                 scr.repaint();
             } else {
-                t_frame = T_DMAON + t_resolution_correct;
                 nDMAStatus = 1;
+                updateFrameT();
                 dmaEnable();
                 scr.repaint();
             }           
@@ -1037,11 +1068,7 @@ public class Ondra extends Thread
         // Tyto dva udaje jsou ve snapshotu ulozeny samostatne. Bezny stav je
         // shodny s bitem 0 portu A3, ale timeline obnovi presne ulozeny stav.
         nDMAStatus = snapshotDmaStatus;
-        if (nDMAStatus == 0) {
-            t_frame = T_DMAOFF;
-        } else {
-            t_frame = T_DMAON + t_resolution_correct;
-        }
+        updateFrameT();
         if (snapshotDmaEnabled) {
             dmaEnable();
         } else {

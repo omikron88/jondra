@@ -54,6 +54,8 @@ public class OndraSD {
 
     // --- prevod T-stavu procesoru na skutecny cas (pri zapnutem videu procesor stoji)
     private long frameClk = 0, frameReal = 0;
+    // TURBO: T-stavy procesoru na jeden T-stav casu modulu (2 MHz) - 1 nebo 2
+    private int cpuMul = 1;
     private boolean frameStarted = false;
 
     // --- stav modulu
@@ -171,7 +173,14 @@ public class OndraSD {
     // cas
 
     private long real(long clk) {
-        return frameReal + (clk - frameClk);
+        return frameReal + (clk - frameClk) / cpuMul;
+    }
+
+    /** TURBO: zmena taktu CPU (vola Ondra na zacatku snimku); cas modulu bezi dal plynule */
+    public synchronized void setCpuMul(int mul, long clk) {
+        frameReal = real(clk);
+        frameClk = clk;
+        cpuMul = mul;
     }
 
     /** volat na zacatku kazdeho snimku (Ondra.ms20) */
@@ -184,7 +193,7 @@ public class OndraSD {
             // Je-li linka v klidu, ubehne cely snimek (casovace modulu jdou podle hodin).
             // Behem prenosu se cas modulu zastavi s procesorem, jinak by se bajty ztratily
             // (JOndra zdrzeni sousti na konec snimku, i kdyz program video mezitim vypne).
-            long ran = clk - frameClk;
+            long ran = (clk - frameClk) / cpuMul;
             boolean busy = rxActive || !txQueue.isEmpty() || pendingRx >= 0 || cmd >= 0;
             frameReal += busy ? ran : Math.max(FRAME_T, ran);
         }

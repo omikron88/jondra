@@ -1148,6 +1148,27 @@ public class JOndra extends javax.swing.JFrame {
         deb.setAlwaysOnTop(true);
     }
 
+    // TURBO: prepinac taktu CPU 2/4 MHz ve stavovem radku (pred OndraSD); nic neresetuje
+    private javax.swing.JToggleButton bTurbo;
+
+    private void initTurbo() {
+        bTurbo = new javax.swing.JToggleButton("4 MHz");
+        bTurbo.setFont(bTurbo.getFont().deriveFont(java.awt.Font.BOLD, 10f));
+        bTurbo.setFocusable(false);
+        bTurbo.setMargin(new Insets(1, 3, 1, 3));
+        bTurbo.setToolTipText("TURBO: CPU 2 MHz (stisknuto = 4 MHz)");
+        bTurbo.addActionListener(e -> {
+            m.setTurbo(bTurbo.isSelected());
+            bTurbo.setToolTipText(bTurbo.isSelected() ? "TURBO: CPU 4 MHz (stisknuto)" : "TURBO: CPU 2 MHz (stisknuto = 4 MHz)");
+        });
+        javax.swing.JSeparator sep = new javax.swing.JSeparator(javax.swing.SwingConstants.VERTICAL);
+        sep.setMaximumSize(new Dimension(5, 32767));
+        sep.setPreferredSize(new Dimension(3, 16));
+        int idx = statusPanel.getComponentZOrder(sdPanel);
+        statusPanel.add(sep, idx);
+        statusPanel.add(bTurbo, idx + 1);
+    }
+
     // stavovy radek modulu OndraSD: popis a LED (modra = P3.2, zluta = vysilani)
     private javax.swing.JPanel sdPanel;
     private javax.swing.JLabel sdBlueLed, sdYellowLed;
@@ -1234,6 +1255,7 @@ public class JOndra extends javax.swing.JFrame {
         m.setTapeLed(TapeLed);
         m.setRecButton(bRec);
         initSdStatus();
+        initTurbo();
 
         // Přidání obrazovky do hlavního okna
         getContentPane().add(scr, BorderLayout.CENTER);
