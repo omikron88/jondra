@@ -1148,6 +1148,57 @@ public class JOndra extends javax.swing.JFrame {
         deb.setAlwaysOnTop(true);
     }
 
+    // stavovy radek modulu OndraSD: popis a LED (modra = P3.2, zluta = vysilani)
+    private javax.swing.JPanel sdPanel;
+    private javax.swing.JLabel sdBlueLed, sdYellowLed;
+    private String sdTip = "";
+
+    private void initSdStatus() {
+        sdPanel = new javax.swing.JPanel();
+        sdPanel.setLayout(new javax.swing.BoxLayout(sdPanel, javax.swing.BoxLayout.LINE_AXIS));
+        sdPanel.setOpaque(false);
+        javax.swing.JSeparator sep = new javax.swing.JSeparator(javax.swing.SwingConstants.VERTICAL);
+        sep.setMaximumSize(new Dimension(5, 32767));
+        sep.setPreferredSize(new Dimension(3, 16));
+        javax.swing.JLabel text = new javax.swing.JLabel(" OndraSD ");
+        text.setFont(text.getFont().deriveFont(java.awt.Font.PLAIN, 11f));
+        sdBlueLed = new javax.swing.JLabel(new javax.swing.ImageIcon(getClass().getResource("/icons/blue.png")));
+        sdYellowLed = new javax.swing.JLabel(new javax.swing.ImageIcon(getClass().getResource("/icons/yellow.png")));
+        for (javax.swing.JLabel l : new javax.swing.JLabel[]{sdBlueLed, sdYellowLed}) {
+            l.setPreferredSize(new Dimension(20, 24));
+            l.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+            l.setEnabled(false);
+        }
+        sdPanel.add(sep);
+        sdPanel.add(text);
+        sdPanel.add(sdBlueLed);
+        sdPanel.add(sdYellowLed);
+        statusPanel.add(sdPanel);
+        javax.swing.Timer t = new javax.swing.Timer(50, e -> updateSdStatus());
+        t.start();
+        updateSdStatus();
+    }
+
+    private void updateSdStatus() {
+        boolean en = m.sd.isEnabled();
+        if (sdPanel.isVisible() != en) {
+            sdPanel.setVisible(en);
+        }
+        if (!en) {
+            return;
+        }
+        sdBlueLed.setEnabled(m.sd.isBlueLedOn());
+        sdYellowLed.setEnabled(m.sd.isYellowLedOn());
+        String tip = m.sd.getStatusText();
+        if (!tip.equals(sdTip)) {
+            sdTip = tip;
+            for (java.awt.Component c : sdPanel.getComponents()) {
+                ((javax.swing.JComponent) c).setToolTipText(tip);
+            }
+            sdPanel.setToolTipText(tip);
+        }
+    }
+
     private void initEmulator() {
         m = new Ondra();
 
@@ -1182,6 +1233,7 @@ public class JOndra extends javax.swing.JFrame {
         m.setYellowLed(YellowLed);
         m.setTapeLed(TapeLed);
         m.setRecButton(bRec);
+        initSdStatus();
 
         // Přidání obrazovky do hlavního okna
         getContentPane().add(scr, BorderLayout.CENTER);

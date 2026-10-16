@@ -25,6 +25,12 @@ Save
 .csw Ramsoft's Compressed Square wave - see format description in doc directory
 .bin binary file - copy of memory block
 
+OndraSD
+-------
+Settings -> "OndraSD module" connects an emulated OndraSD interface. "SD card directory"
+is a directory on disk that plays the role of the SD card. Changing these settings resets
+the machine.
+
 Debugger
 --------
 - Step Into, Step Over

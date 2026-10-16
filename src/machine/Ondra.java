@@ -50,6 +50,7 @@ public class Ondra extends Thread
     public long nLastSeen = System.currentTimeMillis() - 1;
     public Sound snd;
     public Melodik melodik;
+    public final OndraSD sd = new OndraSD();
     public long nLastMilisec = 0;
 
     public JLabel GreenLed, YellowLed, TapeLed;
@@ -194,6 +195,9 @@ public class Ondra extends Thread
 
         nRozliseni = 255;
         genDispTables();
+        // modul OndraSD: reset Ondry nastavi TXD do nuly, modul se restartuje
+        sd.configure(utils.Config.bSdEnabled, utils.Config.strSdDir);
+        sd.reset(clk.getTstates());
         tapestart = false;
         if (RecButton != null) {
             tap.tapeStop();
@@ -305,6 +309,7 @@ public class Ondra extends Thread
                 melodik.setDataReady();
             }
             scr.repaint();
+            sd.frameStart(clk.getTstates());
             cpu.setINTLine(true);
             cpu.execute(clk.getTstates() + 16);
             cpu.setINTLine(false);
@@ -516,6 +521,8 @@ public class Ondra extends Thread
         }
         if ((port & 0x01) == 0) {
             portA0 = (byte) value;
+            // seriova linka do modulu OndraSD: bit 2 = TXD
+            sd.txWrite((value >>> 2) & 1, clk.getTstates());
             if (snd.isEnabled()) {
                 snd.fillBuffer.fillWithSample(((value & 224) >>> 5), clk.getTstates());
             }

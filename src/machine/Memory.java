@@ -97,7 +97,12 @@ public final class Memory {
         address &= 0xffff;
         if(readPages[address >>> PAGE_BIT] == IOVect){
             //kvuli cteni klavesnice
-           return readPages[address >>> PAGE_BIT][address & 0xFF];  
+           byte v = readPages[address >>> PAGE_BIT][address & 0xFF];
+           if (m.sd.isEnabled()) {
+               // bit 6 = seriovy vstup (RXD) z modulu OndraSD
+               v = m.sd.rxLevel(m.clk.getTstates()) ? (byte) (v | 0x40) : (byte) (v & ~0x40);
+           }
+           return v;
         }
        
         return readPages[address >>> PAGE_BIT][address & PAGE_MASK];
