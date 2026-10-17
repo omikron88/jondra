@@ -1152,14 +1152,14 @@ public class JOndra extends javax.swing.JFrame {
     private javax.swing.JToggleButton bTurbo;
 
     private void initTurbo() {
-        bTurbo = new javax.swing.JToggleButton("4 MHz");
+        bTurbo = new javax.swing.JToggleButton("Turbo");
         bTurbo.setFont(bTurbo.getFont().deriveFont(java.awt.Font.BOLD, 10f));
         bTurbo.setFocusable(false);
         bTurbo.setMargin(new Insets(1, 3, 1, 3));
-        bTurbo.setToolTipText("TURBO: CPU 2 MHz (stisknuto = 4 MHz)");
+        bTurbo.setToolTipText("TURBO: CPU 2 MHz (pushed = 4 MHz)");
         bTurbo.addActionListener(e -> {
             m.setTurbo(bTurbo.isSelected());
-            bTurbo.setToolTipText(bTurbo.isSelected() ? "TURBO: CPU 4 MHz (stisknuto)" : "TURBO: CPU 2 MHz (stisknuto = 4 MHz)");
+            bTurbo.setToolTipText(bTurbo.isSelected() ? "Now 4 MHz" : "Now 2 MHz");
         });
         javax.swing.JSeparator sep = new javax.swing.JSeparator(javax.swing.SwingConstants.VERTICAL);
         sep.setMaximumSize(new Dimension(5, 32767));
@@ -1181,7 +1181,7 @@ public class JOndra extends javax.swing.JFrame {
         javax.swing.JSeparator sep = new javax.swing.JSeparator(javax.swing.SwingConstants.VERTICAL);
         sep.setMaximumSize(new Dimension(5, 32767));
         sep.setPreferredSize(new Dimension(3, 16));
-        javax.swing.JLabel text = new javax.swing.JLabel(" OndraSD ");
+        javax.swing.JLabel text = new javax.swing.JLabel("OndraSD");
         text.setFont(text.getFont().deriveFont(java.awt.Font.PLAIN, 11f));
         sdBlueLed = new javax.swing.JLabel(new javax.swing.ImageIcon(getClass().getResource("/icons/blue.png")));
         sdYellowLed = new javax.swing.JLabel(new javax.swing.ImageIcon(getClass().getResource("/icons/yellow.png")));
