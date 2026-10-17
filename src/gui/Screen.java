@@ -109,6 +109,16 @@ public class Screen extends javax.swing.JPanel {
             BufferedImage scaledImage = image; // Výchozí obraz, pokud není ScaleNx aktivní
             int renderWidth, renderHeight;
 
+            if (scanlines) {
+                // Merkur CRT effect (v okně i na celé obrazovce): mikrořádky se stopou paprsku
+                double scale = Math.min((double) panelWidth / imageWidth, (double) panelHeight / imageHeight);
+                renderWidth = (int) (imageWidth * scale);
+                renderHeight = (int) (imageHeight * scale);
+                g2d.drawImage(renderCrt(image, renderWidth, renderHeight),
+                        (panelWidth - renderWidth) / 2, (panelHeight - renderHeight) / 2, null);
+                return;
+            }
+
             if (fullscreenMode && scaleNx) {
                 // Použití ScaleNx pro zvětšení
                 scaledImage = applyScaleNx(image, panelWidth, panelHeight);
@@ -124,9 +134,10 @@ public class Screen extends javax.swing.JPanel {
                 renderHeight = (int) (imageHeight * scale);
 
                 // Použití AffineTransform pro akcelerované škálování
+                // (celočíselný posun, aby mikrořádky lícovaly s maskou scanlines)
                 AffineTransform transform = AffineTransform.getTranslateInstance(
-                        (panelWidth - renderWidth) / 2.0,
-                        (panelHeight - renderHeight) / 2.0
+                        (panelWidth - renderWidth) / 2,
+                        (panelHeight - renderHeight) / 2
                 );
                 transform.scale(scale, scale);
 
@@ -141,9 +152,6 @@ public class Screen extends javax.swing.JPanel {
                 g2d.drawImage(scaledImage, offsetX, offsetY, null);
             }
 
-            if (fullscreenMode && scanlines) {
-                addScanlines(g2d, (panelWidth - renderWidth) / 2, (panelHeight - renderHeight) / 2, renderWidth, renderHeight);
-            }
         }
     }
 
@@ -217,26 +225,127 @@ public class Screen extends javax.swing.JPanel {
         return pixel1[0] == pixel2[0] && pixel1[1] == pixel2[1] && pixel1[2] == pixel2[2];
     }
 
-// Metoda pro přidání prokládání (scanlines)
-    private BufferedImage scanlinePattern;
+// Scanlines: Ondra kreslí snímky neprokládaně, každý mikrořádek je na černobílé
+// CRT obrazovce svislý profil 15 % černá / 70 % světle šedá / 15 % černá. Souvislý úsek
+// rozsvícených bodů je stopa paprsku: pás s půlkruhovými konci (paprsek se rozsvítí
+// a zhasne kulatou stopou). Kreslí se softwarově, vyhlazené podle pokrytí pixelu.
+    private static final double SCAN_DARK = 0.15;     // černý okraj nahoře i dole (podíl mikrořádku)
+    private static final int SCAN_GRAY = 225;         // rozsvícený bod: světle šedá místo bílé
+    private static final int SCAN_SS = 8;             // převzorkování pro okraje stopy
+    private BufferedImage crtImage;
+    private int[] crtPixels;
+    private int[] crtRowStart, crtRowLen, crtColStart; // bloky pixelů obrazovky pro mikrořádky a sloupce
+    private float[][][] crtCap;                        // [výška bloku][řádek bloku][vzdálenost od konce úseku]
+    private float[][] crtBand;                         // [výška bloku][řádek bloku] pokrytí uprostřed úseku
+    private int crtW = -1, crtH = -1, crtSrcW = -1, crtSrcH = -1;
+    private final int[] crtGray = new int[256];
 
-    private void generateScanlinePattern(int width, int height) {
-        scanlinePattern = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = scanlinePattern.createGraphics();
-
-        g2d.setColor(new Color(0, 0, 0, 50)); // Tmavá barva s průhledností
-        for (int y = 0; y < height; y += 4) { // Čáry každé 4 pixely
-            g2d.fillRect(0, y, width, 2); // Čára o výšce 2 pixelů
+    // rozdělení na bloky jako při zvětšení nejbližším sousedem (střed pixelu)
+    private static int[] crtBlocks(int src, int dst, int[] len) {
+        int[] start = new int[src + 1];
+        double scale = (double) dst / src;
+        int p = 0;
+        for (int i = 0; i < src; i++) {
+            start[i] = p;
+            while (p < dst && (int) Math.floor((p + 0.5) / scale) == i) {
+                p++;
+            }
+            if (len != null) {
+                len[i] = p - start[i];
+            }
         }
-
-        g2d.dispose();
+        start[src] = p;
+        return start;
     }
 
-    private void addScanlines(Graphics2D g2d, int offsetX, int offsetY, int width, int height) {
-        if (scanlinePattern == null || scanlinePattern.getWidth() != width || scanlinePattern.getHeight() < height) {
-            generateScanlinePattern(width, height);
+    private void crtPrepare(int w, int h, int srcW, int srcH) {
+        crtW = w; crtH = h; crtSrcW = srcW; crtSrcH = srcH;
+        crtImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        crtPixels = ((java.awt.image.DataBufferInt) crtImage.getRaster().getDataBuffer()).getData();
+        crtRowLen = new int[srcH];
+        crtRowStart = crtBlocks(srcH, h, crtRowLen);
+        crtColStart = crtBlocks(srcW, w, null);
+        int maxN = 1;
+        for (int n : crtRowLen) maxN = Math.max(maxN, n);
+        crtCap = new float[maxN + 1][][];
+        crtBand = new float[maxN + 1][];
+        for (int n = 1; n <= maxN; n++) {
+            double top = SCAN_DARK * n, bot = (1 - SCAN_DARK) * n;   // svítící pás v pixelech bloku
+            double r = (bot - top) / 2, yc = n / 2.0;               // poloměr stopy
+            int capW = (int) Math.ceil(r) + 1;
+            crtBand[n] = new float[n];
+            crtCap[n] = new float[n][capW];
+            for (int t = 0; t < n; t++) {
+                int in = 0;
+                for (int sy = 0; sy < SCAN_SS; sy++) {
+                    double y = t + (sy + 0.5) / SCAN_SS;
+                    if (y >= top && y < bot) in++;
+                }
+                crtBand[n][t] = (float) in / SCAN_SS;
+                for (int k = 0; k < capW; k++) {
+                    int c = 0;
+                    for (int sy = 0; sy < SCAN_SS; sy++) {
+                        double y = t + (sy + 0.5) / SCAN_SS;
+                        for (int sx = 0; sx < SCAN_SS; sx++) {
+                            double x = k + (sx + 0.5) / SCAN_SS;        // vzdálenost od konce úseku
+                            double dx = x < r ? r - x : 0, dy = y - yc;
+                            if (dx * dx + dy * dy <= r * r) c++;
+                        }
+                    }
+                    crtCap[n][t][k] = (float) c / (SCAN_SS * SCAN_SS);
+                }
+            }
         }
-        g2d.drawImage(scanlinePattern, offsetX, offsetY, null);
+        for (int i = 0; i < 256; i++) {
+            int v = Math.round(i / 255f * SCAN_GRAY);
+            crtGray[i] = (v << 16) | (v << 8) | v;
+        }
+    }
+
+    private BufferedImage renderCrt(BufferedImage src, int w, int h) {
+        int sw = src.getWidth(), sh = src.getHeight();
+        if (crtImage == null || w != crtW || h != crtH || sw != crtSrcW || sh != crtSrcH) {
+            crtPrepare(w, h, sw, sh);
+        }
+        java.util.Arrays.fill(crtPixels, 0);
+        boolean[] lit = new boolean[sw + 1];
+        // obraz Ondry je 1bitový (TYPE_BYTE_BINARY): čti přímo bajty, MSB = levý bod
+        byte[] bits = src.getType() == BufferedImage.TYPE_BYTE_BINARY
+                ? ((java.awt.image.DataBufferByte) src.getRaster().getDataBuffer()).getData() : null;
+        int stride = (sw + 7) / 8;
+        for (int j = 0; j < sh; j++) {
+            int n = crtRowLen[j];
+            if (n == 0) continue;
+            for (int x = 0; x < sw; x++) {
+                lit[x] = bits != null ? ((bits[j * stride + (x >> 3)] >> (7 - (x & 7))) & 1) != 0
+                        : (src.getRGB(x, j) & 0xFFFFFF) != 0;
+            }
+            lit[sw] = false;
+            int x = 0;
+            while (x < sw) {
+                if (!lit[x]) { x++; continue; }
+                int x0 = x;
+                while (lit[x]) x++;
+                int a = crtColStart[x0], b = crtColStart[x];         // úsek v pixelech obrazovky
+                int width = b - a;
+                for (int t = 0; t < n; t++) {
+                    float[] cap = crtCap[n][t];
+                    float band = crtBand[n][t];
+                    int capW = cap.length;
+                    int base = (crtRowStart[j] + t) * w;
+                    for (int k = 0; k < width; k++) {
+                        int dl = k, dr = width - 1 - k;
+                        float al = dl < capW ? cap[dl] : band;
+                        float ar = dr < capW ? cap[dr] : band;
+                        float alpha = Math.min(al, ar);
+                        if (alpha > 0) {
+                            crtPixels[base + a + k] = crtGray[Math.round(alpha * 255)];
+                        }
+                    }
+                }
+            }
+        }
+        return crtImage;
     }
 
     /**

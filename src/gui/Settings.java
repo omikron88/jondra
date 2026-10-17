@@ -256,7 +256,7 @@ public class Settings extends javax.swing.JDialog {
             }
         });
 
-        jCheckScanlines.setText("Scanlines in Fullscreen");
+        jCheckScanlines.setText("Merkur CRT effect");
         jCheckScanlines.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jCheckScanlinesActionPerformed(evt);

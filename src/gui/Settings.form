@@ -290,7 +290,7 @@
         </Component>
         <Component class="javax.swing.JCheckBox" name="jCheckScanlines">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Scanlines in Fullscreen"/>
+            <Property name="text" type="java.lang.String" value="Merkur CRT effect"/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jCheckScanlinesActionPerformed"/>
