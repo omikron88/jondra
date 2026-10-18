@@ -527,7 +527,8 @@ public class OndraSD {
 
     /** naplanuje odvysilani bajtu nejdriv v case t */
     private void send(int value, long t) {
-        long start = Math.max(t, lastTxEnd + (long) gapT());
+        // od RI po mov SBUF,A ubehne gapT(), proto se mezera pocita i od prijeti prikazu
+        long start = Math.max(t, lastTxEnd) + (long) gapT();
         start = Math.max(start, modFree);
         TxByte b = new TxByte(start, bitT(), value & 0xff);
         txQueue.addLast(b);
