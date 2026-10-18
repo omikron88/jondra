@@ -73,12 +73,29 @@ public class Settings extends javax.swing.JDialog {
         jCheckFullscreen.setSelected(cf.getFullscreen());
         jCheckScanlines.setSelected(cf.getScanlines());
         jScaleNx.setSelected(cf.getScaleNx());
+        jSdCard.setSelected(utils.Config.bSdEnabled);
+        tSdDir.setText(utils.Config.strSdDir);
+        setSdControls(utils.Config.bSdEnabled);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width-getSize().width)/2, (screen.height-getSize().height)/2);
         setModal(true);
         setVisible(true);
     }
     
+    private void setSdControls(boolean b) {
+        lSdDir.setEnabled(b);
+        tSdDir.setEnabled(b);
+        bSdDir.setEnabled(b);
+    }
+
+    private void storeSdDir(String s) {
+        if (!s.equals(utils.Config.strSdDir)) {
+            utils.Config.strSdDir = s;
+            utils.Config.SaveConfig();
+            ResetNeeded = true;
+        }
+    }
+
     private void setCustom(boolean b) {
         lRomA.setEnabled(b);
         lRomB.setEnabled(b);
@@ -116,6 +133,10 @@ public class Settings extends javax.swing.JDialog {
         jCheckFullscreen = new javax.swing.JCheckBox();
         jCheckScanlines = new javax.swing.JCheckBox();
         jScaleNx = new javax.swing.JCheckBox();
+        jSdCard = new javax.swing.JCheckBox();
+        lSdDir = new javax.swing.JLabel();
+        tSdDir = new javax.swing.JTextField();
+        bSdDir = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Settings");
@@ -235,7 +256,7 @@ public class Settings extends javax.swing.JDialog {
             }
         });
 
-        jCheckScanlines.setText("Scanlines in Fullscreen");
+        jCheckScanlines.setText("Merkur CRT effect");
         jCheckScanlines.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jCheckScanlinesActionPerformed(evt);
@@ -246,6 +267,32 @@ public class Settings extends javax.swing.JDialog {
         jScaleNx.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jScaleNxActionPerformed(evt);
+            }
+        });
+
+        jSdCard.setText("OndraSD module (SD card = directory on disk)");
+        jSdCard.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jSdCardActionPerformed(evt);
+            }
+        });
+
+        lSdDir.setText("SD card directory");
+        lSdDir.setEnabled(false);
+
+        tSdDir.setEnabled(false);
+        tSdDir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                tSdDirActionPerformed(evt);
+            }
+        });
+
+        bSdDir.setText("..");
+        bSdDir.setEnabled(false);
+        bSdDir.setPreferredSize(new java.awt.Dimension(25, 23));
+        bSdDir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bSdDirActionPerformed(evt);
             }
         });
 
@@ -261,6 +308,10 @@ public class Settings extends javax.swing.JDialog {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(tSdDir)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(bSdDir, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(tRomB)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(bRomB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -270,6 +321,8 @@ public class Settings extends javax.swing.JDialog {
                         .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jSdCard)
+                            .addComponent(lSdDir)
                             .addComponent(jScaleNx)
                             .addComponent(jCheckScanlines)
                             .addComponent(jCheckFullscreen)
@@ -320,7 +373,15 @@ public class Settings extends javax.swing.JDialog {
                 .addComponent(jCheckScanlines)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jScaleNx)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(27, 27, 27)
+                .addComponent(jSdCard)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lSdDir)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(tSdDir, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(bSdDir, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 18, Short.MAX_VALUE)
                 .addComponent(bOk)
                 .addContainerGap())
         );
@@ -360,6 +421,7 @@ public class Settings extends javax.swing.JDialog {
 
     private void bOkActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bOkActionPerformed
         utils.Config.nRomType=cf.getRomType();
+        storeSdDir(tSdDir.getText().trim());
         utils.Config.SaveConfig();
         setVisible(false);
         setModal(false);
@@ -444,6 +506,35 @@ public class Settings extends javax.swing.JDialog {
         ResetNeeded = false;
     }//GEN-LAST:event_jScaleNxActionPerformed
     
+    private void jSdCardActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jSdCardActionPerformed
+        utils.Config.bSdEnabled = jSdCard.isSelected();
+        setSdControls(utils.Config.bSdEnabled);
+        utils.Config.SaveConfig();
+        ResetNeeded = true;
+    }//GEN-LAST:event_jSdCardActionPerformed
+
+    private void tSdDirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_tSdDirActionPerformed
+        storeSdDir(tSdDir.getText().trim());
+    }//GEN-LAST:event_tSdDirActionPerformed
+
+    private void bSdDirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bSdDirActionPerformed
+        final JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Choose directory with SD card contents");
+        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        if (!tSdDir.getText().isEmpty()) {
+            fc.setCurrentDirectory(new java.io.File(tSdDir.getText()));
+        }
+        int val = fc.showOpenDialog(Settings.this);
+        if (val==JFileChooser.APPROVE_OPTION) {
+            try {
+                tSdDir.setText(fc.getSelectedFile().getCanonicalPath());
+                storeSdDir(tSdDir.getText());
+            } catch (IOException ex) {
+                Logger.getLogger(Settings.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }//GEN-LAST:event_bSdDirActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton bBasic;
     private javax.swing.JRadioButton bCustom;
@@ -451,6 +542,7 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JRadioButton bPlus;
     private javax.swing.JButton bRomA;
     private javax.swing.JButton bRomB;
+    private javax.swing.JButton bSdDir;
     private javax.swing.JRadioButton bTesla;
     private javax.swing.JRadioButton bVili;
     private javax.swing.ButtonGroup buttonGroup1;
@@ -459,10 +551,13 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JCheckBox jMelodik;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JCheckBox jScaleNx;
+    private javax.swing.JCheckBox jSdCard;
     private javax.swing.JCheckBox jSound;
     private javax.swing.JLabel lRomA;
     private javax.swing.JLabel lRomB;
+    private javax.swing.JLabel lSdDir;
     private javax.swing.JTextField tRomA;
     private javax.swing.JTextField tRomB;
+    private javax.swing.JTextField tSdDir;
     // End of variables declaration//GEN-END:variables
 }

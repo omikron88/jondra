@@ -62,6 +62,10 @@ public class Config {
     public static String strRomBFilePath = "";
     public static int nRomType = 3;
 
+    //modul OndraSD: pripojen a adresar, ktery predstavuje SD kartu
+    public static boolean bSdEnabled = false;
+    public static String strSdDir = "";
+
     public static String getMyPath() {
         String retVal = "";
         retVal = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
@@ -114,6 +118,8 @@ public class Config {
         prop.setProperty("ROMAFILEPATH", strRomAFilePath);
         prop.setProperty("ROMBFILEPATH", strRomBFilePath);
         prop.setProperty("ROMTYPE", String.valueOf(nRomType));        
+        prop.setProperty("SDENABLED", String.valueOf(bSdEnabled));
+        prop.setProperty("SDDIR", strSdDir);
 
         String fileName = getMyPath() + "JOndra.config";
         OutputStream os;
@@ -218,5 +224,7 @@ public class Config {
         strRomAFilePath = nullToEmpty(prop.getProperty("ROMAFILEPATH"));
         strRomBFilePath = nullToEmpty(prop.getProperty("ROMBFILEPATH")); 
         nRomType = parseIntSafe(prop.getProperty("ROMTYPE"),3);         
+        bSdEnabled = parseBooleanSafe(prop.getProperty("SDENABLED"), false);
+        strSdDir = nullToEmpty(prop.getProperty("SDDIR"));
     }
 }

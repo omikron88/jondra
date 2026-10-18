@@ -112,7 +112,7 @@ public class Tape implements ClockTimeoutListener {
     public void clockTimeout() {
         if (record) {
             if (sst==st.CSW) {
-                m.clk.setTimeout(srate);
+                m.clk.setTimeout(srate * m.getCpuMul());   // TURBO: vzorky pasky v realnem case
                 scsw.writeSample((m.portA3&0x08)!=0);
             } 
             else {
@@ -122,7 +122,7 @@ public class Tape implements ClockTimeoutListener {
         else {
             switch (lst) {
                 case CSW: {
-                    m.clk.setTimeout(lrate);
+                    m.clk.setTimeout(lrate * m.getCpuMul());
                     m.mem.setTapeIn(lcsw.readSample());
                     break;
                 }
@@ -139,7 +139,7 @@ public class Tape implements ClockTimeoutListener {
                         m.startEmulation(); 
                        }
                     } else {
-                        m.clk.setTimeout(lrate);
+                        m.clk.setTimeout(lrate * m.getCpuMul());
                         // Uložíme bit do bitDump
                         int sampleValue = ltap.generateFrame() ? 1 : 0;
                         bitDump.append(sampleValue != 0 ? '1' : '0');
@@ -149,7 +149,7 @@ public class Tape implements ClockTimeoutListener {
                 }
                 
                 case WAV: {
-                    m.clk.setTimeout(lrate);
+                    m.clk.setTimeout(lrate * m.getCpuMul());
                     try {
                         lwav.readFrames(tbuff, 1);
                     } catch (Exception ex) {
