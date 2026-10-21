@@ -7,6 +7,12 @@ package gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
 import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -28,7 +34,7 @@ public class About extends JDialog {
     Box b2 = Box.createHorizontalBox();   
     b2.add(new JLabel("Ondra emulator written in pure Java"));
     Box b3 = Box.createHorizontalBox();
-    b3.add(new JLabel("Build date 5.8.2026"));
+    b3.add(new JLabel("Build date " + buildDate()));
     b.add(b2, "Center");
     b.add(b3, "Center");
     b.add(Box.createGlue());
@@ -47,5 +53,30 @@ public class About extends JDialog {
     });
 
     setSize(250, 150);
+  }
+
+  /**
+   * Datum sestaveni: cas zapsani manifestu do JARu (build.sh i NetBeans ho
+   * nastavi pri baleni), pri spusteni z nezabalenych trid cas prekladu About.class.
+   */
+  private static String buildDate() {
+    long t = 0;
+    try {
+      URL src = About.class.getProtectionDomain().getCodeSource().getLocation();
+      File f = new File(src.toURI());
+      if (f.isFile()) {
+        try (JarFile jar = new JarFile(f)) {
+          ZipEntry e = jar.getEntry(JarFile.MANIFEST_NAME);
+          if (e != null) {
+            t = e.getTime();
+          }
+        }
+      } else {
+        t = About.class.getResource("About.class").openConnection().getLastModified();
+      }
+    } catch (Exception ex) {
+      t = 0;
+    }
+    return t > 0 ? new SimpleDateFormat("d.M.yyyy").format(new Date(t)) : "unknown";
   }
 }

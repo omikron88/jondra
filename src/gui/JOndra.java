@@ -1256,6 +1256,8 @@ public class JOndra extends javax.swing.JFrame {
         m.setRecButton(bRec);
         initSdStatus();
         initTurbo();
+        // okno s papirem tiskarny Tesla BT100 (kdyz je zapnuta v Settings)
+        new javax.swing.Timer(300, e -> BT100Window.update(m, this)).start();
 
         // Přidání obrazovky do hlavního okna
         getContentPane().add(scr, BorderLayout.CENTER);

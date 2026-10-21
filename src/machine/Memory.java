@@ -102,6 +102,19 @@ public final class Memory {
                // bit 6 = seriovy vstup (RXD) z modulu OndraSD
                v = m.sd.rxLevel(m.clk.getTstates()) ? (byte) (v | 0x40) : (byte) (v & ~0x40);
            }
+           if ((address & 0xFF) == 0x09 && m.bt100.isEnabled()) {
+               // snimace BT-100 na bitech 0-3 radku joysticku (polarita
+               // jednotlivych snimacu podle BT100.SENS_POL)
+               v = (byte) ((v & ~0x0F) | m.bt100.sensorLines(m.clk.getTstates()));
+           } else if ((address & 0xFF) < 0x09 && m.bt100.isEnabled()) {
+               // vstupy joysticku jsou propojene s datovymi vodici matice
+               // klavesnice: snimac v L stahne svuj bit v kazdem radku
+               v = (byte) (v & (0xF0 | m.bt100.sensorLines(m.clk.getTstates())));
+           }
+           if (m.prn.isEnabled()) {
+               // bit 5 = BUSY tiskarny (ma prednost pred detekci Melodiku)
+               v = m.prn.isBusy(m.clk.getTstates()) ? (byte) (v | 0x20) : (byte) (v & ~0x20);
+           }
            return v;
         }
        

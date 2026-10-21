@@ -66,6 +66,13 @@ public class Config {
     public static boolean bSdEnabled = false;
     public static String strSdDir = "";
 
+    //tiskarna na Centronics portu: zapnuta a soubor, kam se tiskne
+    public static boolean bPrinter = false;
+    public static String strPrinterFile = "";
+
+    //tiskarna Tesla BT-100 (okno s papirem)
+    public static boolean bBT100 = false;
+
     public static String getMyPath() {
         String retVal = "";
         retVal = JOndra.class.getProtectionDomain().getCodeSource().getLocation().getPath();
@@ -120,6 +127,9 @@ public class Config {
         prop.setProperty("ROMTYPE", String.valueOf(nRomType));        
         prop.setProperty("SDENABLED", String.valueOf(bSdEnabled));
         prop.setProperty("SDDIR", strSdDir);
+        prop.setProperty("PRINTER", String.valueOf(bPrinter));
+        prop.setProperty("PRINTERFILE", strPrinterFile);
+        prop.setProperty("BT100", String.valueOf(bBT100));
 
         String fileName = getMyPath() + "JOndra.config";
         OutputStream os;
@@ -226,5 +236,8 @@ public class Config {
         nRomType = parseIntSafe(prop.getProperty("ROMTYPE"),3);         
         bSdEnabled = parseBooleanSafe(prop.getProperty("SDENABLED"), false);
         strSdDir = nullToEmpty(prop.getProperty("SDDIR"));
+        bPrinter = parseBooleanSafe(prop.getProperty("PRINTER"), false);
+        strPrinterFile = nullToEmpty(prop.getProperty("PRINTERFILE"));
+        bBT100 = parseBooleanSafe(prop.getProperty("BT100"), false);
     }
 }
