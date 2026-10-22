@@ -76,6 +76,10 @@ public class Settings extends javax.swing.JDialog {
         jSdCard.setSelected(utils.Config.bSdEnabled);
         tSdDir.setText(utils.Config.strSdDir);
         setSdControls(utils.Config.bSdEnabled);
+        jPrinter.setSelected(utils.Config.bPrinter);
+        tPrnFile.setText(utils.Config.strPrinterFile);
+        setPrnControls(utils.Config.bPrinter);
+        jBT100.setSelected(utils.Config.bBT100);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         setLocation((screen.width-getSize().width)/2, (screen.height-getSize().height)/2);
         setModal(true);
@@ -86,6 +90,20 @@ public class Settings extends javax.swing.JDialog {
         lSdDir.setEnabled(b);
         tSdDir.setEnabled(b);
         bSdDir.setEnabled(b);
+    }
+
+    private void setPrnControls(boolean b) {
+        lPrnFile.setEnabled(b);
+        tPrnFile.setEnabled(b);
+        bPrnFile.setEnabled(b);
+    }
+
+    private void storePrnFile(String s) {
+        if (!s.equals(utils.Config.strPrinterFile)) {
+            utils.Config.strPrinterFile = s;
+            utils.Config.SaveConfig();
+            ResetNeeded = true;
+        }
     }
 
     private void storeSdDir(String s) {
@@ -137,6 +155,11 @@ public class Settings extends javax.swing.JDialog {
         lSdDir = new javax.swing.JLabel();
         tSdDir = new javax.swing.JTextField();
         bSdDir = new javax.swing.JButton();
+        jPrinter = new javax.swing.JCheckBox();
+        lPrnFile = new javax.swing.JLabel();
+        tPrnFile = new javax.swing.JTextField();
+        bPrnFile = new javax.swing.JButton();
+        jBT100 = new javax.swing.JCheckBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Settings");
@@ -296,6 +319,39 @@ public class Settings extends javax.swing.JDialog {
             }
         });
 
+        jPrinter.setText("Printer on Centronics port (Melodik off)");
+        jPrinter.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jPrinterActionPerformed(evt);
+            }
+        });
+
+        lPrnFile.setText("Print to file");
+        lPrnFile.setEnabled(false);
+
+        tPrnFile.setEnabled(false);
+        tPrnFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                tPrnFileActionPerformed(evt);
+            }
+        });
+
+        bPrnFile.setText("..");
+        bPrnFile.setEnabled(false);
+        bPrnFile.setPreferredSize(new java.awt.Dimension(25, 23));
+        bPrnFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                bPrnFileActionPerformed(evt);
+            }
+        });
+
+        jBT100.setText("Tesla BT100 printer (paper window, Melodik off)");
+        jBT100.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBT100ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -307,6 +363,10 @@ public class Settings extends javax.swing.JDialog {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(tPrnFile)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(bPrnFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(tSdDir)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -321,6 +381,9 @@ public class Settings extends javax.swing.JDialog {
                         .addComponent(bRomA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jBT100)
+                            .addComponent(jPrinter)
+                            .addComponent(lPrnFile)
                             .addComponent(jSdCard)
                             .addComponent(lSdDir)
                             .addComponent(jScaleNx)
@@ -381,6 +444,16 @@ public class Settings extends javax.swing.JDialog {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(tSdDir, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(bSdDir, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(jPrinter)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lPrnFile)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(tPrnFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(bPrnFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(jBT100)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 18, Short.MAX_VALUE)
                 .addComponent(bOk)
                 .addContainerGap())
@@ -481,6 +554,13 @@ public class Settings extends javax.swing.JDialog {
     private void jMelodikActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMelodikActionPerformed
         cf.setMelodik(jMelodik.isSelected());
         utils.Config.bMelodik=cf.getMelodik();
+        if (jMelodik.isSelected()) {
+            jPrinter.setSelected(false);
+            utils.Config.bPrinter = false;
+            setPrnControls(false);
+            jBT100.setSelected(false);
+            utils.Config.bBT100 = false;
+        }
         utils.Config.SaveConfig();
         ResetNeeded = true;
     }//GEN-LAST:event_jMelodikActionPerformed
@@ -535,10 +615,65 @@ public class Settings extends javax.swing.JDialog {
         }
     }//GEN-LAST:event_bSdDirActionPerformed
 
+    private void jPrinterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPrinterActionPerformed
+        utils.Config.bPrinter = jPrinter.isSelected();
+        setPrnControls(utils.Config.bPrinter);
+        if (utils.Config.bPrinter) {
+            // Melodik, tiskarna i BT100 se pripojuji na stejny port
+            offMelodik();
+            jBT100.setSelected(false);
+            utils.Config.bBT100 = false;
+        }
+        utils.Config.SaveConfig();
+        ResetNeeded = true;
+    }//GEN-LAST:event_jPrinterActionPerformed
+
+    private void tPrnFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_tPrnFileActionPerformed
+        storePrnFile(tPrnFile.getText().trim());
+    }//GEN-LAST:event_tPrnFileActionPerformed
+
+    private void bPrnFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bPrnFileActionPerformed
+        final JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("File for printer output (appended)");
+        if (!tPrnFile.getText().isEmpty()) {
+            fc.setSelectedFile(new java.io.File(tPrnFile.getText()));
+        }
+        int val = fc.showSaveDialog(Settings.this);
+        if (val==JFileChooser.APPROVE_OPTION) {
+            try {
+                tPrnFile.setText(fc.getSelectedFile().getCanonicalPath());
+                storePrnFile(tPrnFile.getText());
+            } catch (IOException ex) {
+                Logger.getLogger(Settings.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }//GEN-LAST:event_bPrnFileActionPerformed
+
+    private void jBT100ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBT100ActionPerformed
+        utils.Config.bBT100 = jBT100.isSelected();
+        if (utils.Config.bBT100) {
+            offMelodik();
+            jPrinter.setSelected(false);
+            utils.Config.bPrinter = false;
+            setPrnControls(false);
+        }
+        utils.Config.SaveConfig();
+        ResetNeeded = true;
+    }//GEN-LAST:event_jBT100ActionPerformed
+
+    private void offMelodik() {
+        if (jMelodik.isSelected()) {
+            jMelodik.setSelected(false);
+            cf.setMelodik(false);
+            utils.Config.bMelodik = false;
+        }
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton bBasic;
     private javax.swing.JRadioButton bCustom;
     private javax.swing.JButton bOk;
+    private javax.swing.JButton bPrnFile;
     private javax.swing.JRadioButton bPlus;
     private javax.swing.JButton bRomA;
     private javax.swing.JButton bRomB;
@@ -546,16 +681,20 @@ public class Settings extends javax.swing.JDialog {
     private javax.swing.JRadioButton bTesla;
     private javax.swing.JRadioButton bVili;
     private javax.swing.ButtonGroup buttonGroup1;
+    private javax.swing.JCheckBox jBT100;
     private javax.swing.JCheckBox jCheckFullscreen;
     private javax.swing.JCheckBox jCheckScanlines;
     private javax.swing.JCheckBox jMelodik;
+    private javax.swing.JCheckBox jPrinter;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JCheckBox jScaleNx;
     private javax.swing.JCheckBox jSdCard;
     private javax.swing.JCheckBox jSound;
+    private javax.swing.JLabel lPrnFile;
     private javax.swing.JLabel lRomA;
     private javax.swing.JLabel lRomB;
     private javax.swing.JLabel lSdDir;
+    private javax.swing.JTextField tPrnFile;
     private javax.swing.JTextField tRomA;
     private javax.swing.JTextField tRomB;
     private javax.swing.JTextField tSdDir;

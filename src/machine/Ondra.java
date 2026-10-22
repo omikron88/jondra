@@ -51,6 +51,10 @@ public class Ondra extends Thread
     public Sound snd;
     public Melodik melodik;
     public final OndraSD sd = new OndraSD();
+    // tiskarna na Centronics portu (vystup do souboru)
+    public final Printer prn = new Printer(this);
+    // tiskarna Tesla BT-100 na portu 9 (snimace na radku 0E009h)
+    public final BT100 bt100 = new BT100(this);
     public long nLastMilisec = 0;
 
     public JLabel GreenLed, YellowLed, TapeLed;
@@ -202,6 +206,10 @@ public class Ondra extends Thread
         // modul OndraSD: reset Ondry nastavi TXD do nuly, modul se restartuje
         sd.configure(utils.Config.bSdEnabled, utils.Config.strSdDir);
         sd.reset(clk.getTstates());
+        prn.configure(utils.Config.bPrinter, utils.Config.strPrinterFile);
+        prn.reset(clk.getTstates());
+        bt100.configure(utils.Config.bBT100);
+        bt100.reset(clk.getTstates());
         tapestart = false;
         if (RecButton != null) {
             tap.tapeStop();
@@ -551,6 +559,10 @@ public class Ondra extends Thread
 
         }
         if ((port & 0x01) == 0) {
+            // sestupna hrana /STB (bit 3): tiskarna prevezme bajt z portu 9
+            if ((portA0 & 0x08) != 0 && (value & 0x08) == 0) {
+                prn.strobe(portA1, clk.getTstates());
+            }
             portA0 = (byte) value;
             // seriova linka do modulu OndraSD: bit 2 = TXD
             sd.txWrite((value >>> 2) & 1, clk.getTstates());
@@ -582,8 +594,9 @@ public class Ondra extends Thread
         //printer port
         if ((port & 0x02) == 0) {
             portA1 = (byte) value;
+            bt100.write(value, clk.getTstates());
             //pokud je strobe na high, tak zapis na Melodik
-            if ((portA0 & 0x8) != 0) {
+            if ((portA0 & 0x8) != 0 && !prn.isEnabled() && !bt100.isEnabled()) {
                 if (melodik.isEnabled()) {
                     melodik.sndChip.write(value);
                 }
