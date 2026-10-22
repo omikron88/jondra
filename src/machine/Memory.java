@@ -96,17 +96,17 @@ public final class Memory {
     public byte readByte(int address) {
         address &= 0xffff;
         if(readPages[address >>> PAGE_BIT] == IOVect){
-            //kvuli cteni klavesnice
-           byte v = readPages[address >>> PAGE_BIT][address & 0xFF];
+            // dekoduje se jen A[3:0], okno E000-FFFF se opakuje po 16 bajtech
+           byte v = readPages[address >>> PAGE_BIT][address & 0x0F];
            if (m.sd.isEnabled()) {
                // bit 6 = seriovy vstup (RXD) z modulu OndraSD
                v = m.sd.rxLevel(m.clk.getTstates()) ? (byte) (v | 0x40) : (byte) (v & ~0x40);
            }
-           if ((address & 0xFF) == 0x09 && m.bt100.isEnabled()) {
+           if ((address & 0x0F) == 0x09 && m.bt100.isEnabled()) {
                // snimace BT-100 na bitech 0-3 radku joysticku (polarita
                // jednotlivych snimacu podle BT100.SENS_POL)
                v = (byte) ((v & ~0x0F) | m.bt100.sensorLines(m.clk.getTstates()));
-           } else if ((address & 0xFF) < 0x09 && m.bt100.isEnabled()) {
+           } else if ((address & 0x0F) < 0x09 && m.bt100.isEnabled()) {
                // vstupy joysticku jsou propojene s datovymi vodici matice
                // klavesnice: snimac v L stahne svuj bit v kazdem radku
                v = (byte) (v & (0xF0 | m.bt100.sensorLines(m.clk.getTstates())));
