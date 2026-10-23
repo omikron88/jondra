@@ -25,8 +25,8 @@ import java.util.Set;
  * Chovani odpovida disassembly firmware (ATM.HEX):
  *  - po zapnuti/resetu posle 0DH a pak kazdych ~1,7 s vysila __LOADER.BIN (9600 Bd),
  *    dokud neprijde prikaz N;
- *  - prikazy: A rychlost, I LED, K verze, D adresar, C zmena adresare, F soubor,
- *    T/S hodiny, E echo, M text, G/J/P/Z stav, L znovu vysilat zavadec,
+ *  - prikazy: A rychlost, I LED, K verze, D adresar (atribut OR 51h jako firmware), C zmena adresare, F soubor,
+ *    T/S hodiny (obvod DS1307: registry 0-6, stav v JOndra.config, viz rtcNow), E echo, M text, G/J/P/Z stav, L znovu vysilat zavadec,
  *    N/U/V stop zavadece, X/H a bajt 00H reset modulu;
  *  - F na neexistujici soubor neodpovi nicim (tak jako skutecny modul).
  * Sektorove prikazy B/R/W (CP/M) nejsou podporovany, odpovi chybou (00H).
@@ -70,7 +70,10 @@ public class OndraSD {
     private long errorSince = 0;
     private long lastT = 0;               // posledni znamy cas modulu
     private long lastTxActive = -1000000000L; // konec posledniho odvysilaneho bajtu
-    private long rtcOffsetSec = 0;
+    // hodiny DS1307 (registry 0-6 jak je zapsal program, bezi podle hodin PC)
+    private final int[] rtcReg = new int[7];
+    private long rtcBaseMs = 0;           // cas PC, ke kteremu plati rtcReg
+    private boolean rtcLoaded = false;
 
     private int cmd = -1;
     private final ArrayList<Integer> params = new ArrayList<>();
@@ -162,6 +165,7 @@ public class OndraSD {
             }
             sb.append("<br>").append(baud).append(" Bd").append(broadcast ? ", broadcasting loader" : "");
         }
+        sb.append("<br>RTC: ").append(rtcText());
         return sb.append("</html>").toString();
     }
 
@@ -495,7 +499,11 @@ public class OndraSD {
             case 'C':
                 if (n == 11) {
                     cmd = -1;
-                    changeDir(name11());
+                    String nm = name11();
+                    if (nm.charAt(0) != '/') {
+                        hledani(nm, t);           // L0388: prochazi adresar
+                    }
+                    changeDir(nm);
                 }
                 break;
             case 'F':
@@ -506,8 +514,9 @@ public class OndraSD {
                     if (debug) {
                         System.out.println("OndraSD: F " + nm + (f == null ? " - nenalezeno" : " -> " + f));
                     }
+                    long konec = hledani(nm, t);  // L02EE: prochazi adresar az k souboru
                     if (f != null) {
-                        sendFile(f, t + 4000, nm.charAt(8) == 'T' ? 1 : 0);
+                        sendFile(f, konec, nm.charAt(8) == 'T' ? 1 : 0);
                     }
                 }
                 break;
@@ -556,6 +565,7 @@ public class OndraSD {
                 }
                 send(data[i], t);
             }
+            pause(SECTOR_CYCLES);         // L0343: lcall L09FA (konec prace se souborem)
             return;
         }
         // TAP (L0347): preskoc 26 B, posli 1024 B, preskoc 27 B, posli 1024 B ...
@@ -591,23 +601,136 @@ public class OndraSD {
         return (v >> 4) * 10 + (v & 15);
     }
 
+    /** T (L01CA): registry 0-6 obvodu DS1307 tak, jak je obvod prave ukazuje */
     private void sendRtc(long t) {
-        LocalDateTime d = LocalDateTime.now().plusSeconds(rtcOffsetSec);
-        int[] r = {bcd(d.getSecond()), bcd(d.getMinute()), bcd(d.getHour()), d.getDayOfWeek().getValue(),
-            bcd(d.getDayOfMonth()), bcd(d.getMonthValue()), bcd(d.getYear() % 100)};
-        for (int v : r) {
+        for (int v : rtcNow()) {
             send(v, t + 1000);
         }
     }
 
+    /**
+     * S (L01F3): 7 bajtu se zapise do registru 0-6 beze zmeny, tak jako na obvod
+     * (i neplatne datum, den v tydnu nezavisle na datu, bit CH zastavi hodiny).
+     * Zapis sekund v DS1307 nuluje delicku, proto se hodiny pocitaji od teto chvile.
+     */
     private void setRtc() {
-        try {
-            LocalDateTime d = LocalDateTime.of(2000 + unbcd(params.get(6)), unbcd(params.get(5)),
-                    unbcd(params.get(4)), unbcd(params.get(2) & 0x3f), unbcd(params.get(1)), unbcd(params.get(0) & 0x7f));
-            rtcOffsetSec = java.time.Duration.between(LocalDateTime.now(), d).getSeconds();
-        } catch (Exception e) {
-            // neplatne datum: skutecny obvod by ho zapsal, tady se ignoruje
+        rtcLoad();
+        for (int i = 0; i < 7; i++) {
+            rtcReg[i] = params.get(i) & 0xff;
         }
+        rtcBaseMs = System.currentTimeMillis();
+        rtcSave();
+    }
+
+    /** stav hodin ze souboru JOndra.config; jinak (prvni spusteni) cas PC */
+    private void rtcLoad() {
+        if (rtcLoaded) {
+            return;
+        }
+        rtcLoaded = true;
+        try {
+            String[] f = utils.Config.strSdRtc.trim().split(",");
+            if (f.length == 8) {
+                long base = Long.parseLong(f[0]);
+                int[] r = new int[7];
+                for (int i = 0; i < 7; i++) {
+                    r[i] = Integer.parseInt(f[i + 1], 16) & 0xff;
+                }
+                System.arraycopy(r, 0, rtcReg, 0, 7);
+                rtcBaseMs = base;
+                return;
+            }
+        } catch (NumberFormatException e) {
+            // poskozeny zaznam: jako novy obvod nastaveny podle PC
+        }
+        LocalDateTime d = LocalDateTime.now();
+        rtcReg[0] = bcd(d.getSecond());
+        rtcReg[1] = bcd(d.getMinute());
+        rtcReg[2] = bcd(d.getHour());                    // 24hodinovy rezim
+        rtcReg[3] = d.getDayOfWeek().getValue() % 7;      // 0 = nedele (jako ONDRACLK.BIN)
+        rtcReg[4] = bcd(d.getDayOfMonth());
+        rtcReg[5] = bcd(d.getMonthValue());
+        rtcReg[6] = bcd(d.getYear() % 100);
+        rtcBaseMs = System.currentTimeMillis() - d.getNano() / 1000000;
+    }
+
+    /** obvod ma baterii: stav se uklada do JOndra.config (SDRTC) */
+    private void rtcSave() {
+        StringBuilder sb = new StringBuilder().append(rtcBaseMs);
+        for (int v : rtcReg) {
+            sb.append(String.format(",%02X", v));
+        }
+        utils.Config.strSdRtc = sb.toString();
+        utils.Config.SaveConfig();
+    }
+
+    /** registry 0-6 posunute o cas, ktery od zapisu ubehl (pri CH=1 hodiny stoji) */
+    private int[] rtcNow() {
+        rtcLoad();
+        int[] r = rtcReg.clone();
+        long n = (System.currentTimeMillis() - rtcBaseMs) / 1000;
+        if ((r[0] & 0x80) != 0 || n <= 0) {
+            return r;
+        }
+        long sec = unbcd(r[0] & 0x7f) + n;
+        r[0] = bcd((int) (sec % 60));
+        long min = unbcd(r[1] & 0x7f) + sec / 60;
+        r[1] = bcd((int) (min % 60));
+        long hod;
+        boolean h12 = (r[2] & 0x40) != 0;
+        if (h12) {                                        // 12hodinovy rezim: bit 5 = PM
+            hod = unbcd(r[2] & 0x1f) % 12 + ((r[2] & 0x20) != 0 ? 12 : 0);
+        } else {
+            hod = unbcd(r[2] & 0x3f);
+        }
+        hod += min / 60;
+        long dny = hod / 24;
+        int h = (int) (hod % 24);
+        if (h12) {
+            r[2] = 0x40 | (h >= 12 ? 0x20 : 0) | bcd(h % 12 == 0 ? 12 : h % 12);
+        } else {
+            r[2] = bcd(h);
+        }
+        int dow = r[3] & 7, den = unbcd(r[4] & 0x3f), mes = unbcd(r[5] & 0x1f), rok = unbcd(r[6]);
+        for (long i = 0; i < dny; i++) {
+            dow = dow >= 7 ? 1 : dow + 1;                 // DS1307: 7 -> 1
+            if (++den > delkaMesice(mes, rok)) {
+                den = 1;
+                if (++mes > 12) {
+                    mes = 1;
+                    rok = (rok + 1) % 100;
+                }
+            }
+        }
+        r[3] = dow;
+        r[4] = bcd(den);
+        r[5] = bcd(mes);
+        r[6] = bcd(rok);
+        return r;
+    }
+
+    /** DS1307: prestupny je kazdy rok delitelny 4 (2000-2099) */
+    private static int delkaMesice(int mes, int rok) {
+        switch (mes) {
+            case 2:
+                return rok % 4 == 0 ? 29 : 28;
+            case 4:
+            case 6:
+            case 9:
+            case 11:
+                return 30;
+            default:
+                return 31;
+        }
+    }
+
+    /** cas RTC pro stavovou bublinu */
+    private String rtcText() {
+        int[] r = rtcNow();
+        boolean h12 = (r[2] & 0x40) != 0;
+        return String.format("%02X.%02X.20%02X %02X:%02X:%02X%s%s", r[4], r[5], r[6],
+                h12 ? r[2] & 0x1f : r[2] & 0x3f, r[1], r[0] & 0x7f,
+                h12 ? ((r[2] & 0x20) != 0 ? " PM" : " AM") : "", (r[0] & 0x80) != 0 ? " (stopped)" : "");
     }
 
     // =====================================================================
@@ -694,6 +817,24 @@ public class OndraSD {
         }
     }
 
+    /**
+     * Firmware hleda jmeno postupne po polozkach adresare (cteni sektoru karty).
+     * Modul je do te doby zaneprazdneny: dalsi prikaz ceka v SBUF (jeden bajt).
+     * Chybejici soubor = projde cely adresar. Vraci cas konce hledani.
+     */
+    private long hledani(String fat, long t) {
+        int i = 0;
+        for (Entry e : listDir(curDir)) {
+            i++;
+            if (e.fat.equals(fat)) {
+                break;
+            }
+        }
+        long konec = t + 4000 + (long) (i * DIRENTRY_CYCLES * CYCLE_T);
+        modFree = Math.max(modFree, konec);
+        return konec;
+    }
+
     private File findFile(File dir, String fat, boolean wantDir) {
         for (Entry e : listDir(dir)) {
             if (e.dir == wantDir && e.fat.equals(fat) && e.file != null) {
@@ -718,11 +859,17 @@ public class OndraSD {
             for (char c : e.fat.toCharArray()) {
                 send(c, t);
             }
-            send(attr | 0x40, t);
+            // L02CA: mov A,3Bh / orl A,40h - atribut ORovany s RAM 40h (pracovni
+            // promenna karty, po cteni sektoru CMD17 = 51h). Bit 4 (adresar) tak byva
+            // nastaveny i u souboru; OndraFM proto pozna soubor podle bitu 5.
+            send(attr | 0x51, t);
             send(0x00, t);
             pause(DIRENTRY_CYCLES);       // L0A0D: cteni dalsi polozky adresare z karty
         }
         send(0xFF, t);
+        // L02D9: po FFh jeste lcall L0A45 (prace s kartou). Mezitim modul podrzi
+        // jen jeden prijaty bajt, dalsi se ztrati (prikaz poslany hned po FFh).
+        pause(SECTOR_CYCLES);
     }
 
     private void changeDir(String fat) {
