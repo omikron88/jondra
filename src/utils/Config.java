@@ -65,6 +65,8 @@ public class Config {
     //modul OndraSD: pripojen a adresar, ktery predstavuje SD kartu
     public static boolean bSdEnabled = false;
     public static String strSdDir = "";
+    //hodiny DS1307 v modulu: "cas PC v ms,R0,...,R6" (registry hex), prazdne = podle PC
+    public static String strSdRtc = "";
 
     //tiskarna na Centronics portu: zapnuta a soubor, kam se tiskne
     public static boolean bPrinter = false;
@@ -127,6 +129,7 @@ public class Config {
         prop.setProperty("ROMTYPE", String.valueOf(nRomType));        
         prop.setProperty("SDENABLED", String.valueOf(bSdEnabled));
         prop.setProperty("SDDIR", strSdDir);
+        prop.setProperty("SDRTC", strSdRtc);
         prop.setProperty("PRINTER", String.valueOf(bPrinter));
         prop.setProperty("PRINTERFILE", strPrinterFile);
         prop.setProperty("BT100", String.valueOf(bBT100));
@@ -236,6 +239,7 @@ public class Config {
         nRomType = parseIntSafe(prop.getProperty("ROMTYPE"),3);         
         bSdEnabled = parseBooleanSafe(prop.getProperty("SDENABLED"), false);
         strSdDir = nullToEmpty(prop.getProperty("SDDIR"));
+        strSdRtc = nullToEmpty(prop.getProperty("SDRTC"));
         bPrinter = parseBooleanSafe(prop.getProperty("PRINTER"), false);
         strPrinterFile = nullToEmpty(prop.getProperty("PRINTERFILE"));
         bBT100 = parseBooleanSafe(prop.getProperty("BT100"), false);
