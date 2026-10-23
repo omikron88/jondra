@@ -81,6 +81,8 @@ public class Ondra extends Thread
     private Debugger deb;
 
     public int nRozliseni = 255;
+    // INT drzi 64 us (perioda CLK1 z 8253, Mode 5) = 128 T pri 2 MHz
+    private static final int INT_PULSE = 128;
     boolean bFrst = true;
 
     public boolean bAutoRunAfterReset = false;
@@ -323,11 +325,13 @@ public class Ondra extends Thread
             }
             scr.repaint();
             sd.frameStart(clk.getTstates());
+            // impuls pevne sirky, shodi se sam bez ohledu na to, zda ho CPU prijal
+            int tInt = intPulse();
             cpu.setINTLine(true);
-            cpu.execute(clk.getTstates() + 16);
+            cpu.execute(clk.getTstates() + tInt);
             cpu.setINTLine(false);
             if (!paused) {
-                cpu.execute(clk.getTstates() + t_frame - 16);
+                cpu.execute(clk.getTstates() + t_frame - tInt);
             }
         }
 
@@ -493,6 +497,11 @@ public class Ondra extends Thread
     /** pocet T-stavu procesoru za snimek podle videa a taktu (TURBO) */
     private void updateFrameT() {
         t_frame = (nDMAStatus == 0 ? T_DMAOFF : T_DMAON + t_resolution_correct) * cpuMul;
+    }
+
+    /** sirka INT impulsu v T-stavech procesoru pri aktualnim taktu */
+    private int intPulse() {
+        return INT_PULSE * cpuMul;
     }
 
     /** TURBO: prepni takt CPU 2/4 MHz; projevi se od dalsiho snimku, emulace se neresetuje */
