@@ -31,6 +31,12 @@ Settings -> "OndraSD module" connects an emulated OndraSD interface. "SD card di
 is a directory on disk that plays the role of the SD card. Changing these settings resets
 the machine.
 
+Printers
+--------
+
+Emulation of the Centronics (paraller) printer to file
+Emulation of the Tesla BT100 printer
+
 Debugger
 --------
 - Step Into, Step Over
